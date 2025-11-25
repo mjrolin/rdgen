@@ -265,8 +265,8 @@ jobs:
       - name: allow custom.txt
         continue-on-error: true
         run: |
-          Invoke-WebRequest -Uri https://raw.githubusercontent.com/bryangerlach/rdgen/refs/heads/master/.github/patches/allowCustom.py -OutFile allowCustom.py
-          python allowCustom.py
+          # Fix: Remove signature verification block using sed (updated for 1.4.x)
+          sed -i '/const KEY: &str = "5Qbwsde3unUcJBtrx9ZkvUmwFNoExHzpryHuPUdqlWM=";/,/let Ok(data) = sign::verify(&data, &pk)/d' ./src/common.rs
           # Remove Setup Server Tip
           Invoke-WebRequest -Uri https://raw.githubusercontent.com/bryangerlach/rdgen/refs/heads/master/.github/patches/removeSetupServerTip.diff -OutFile removeSetupServerTip.diff
           git apply removeSetupServerTip.diff
@@ -699,3 +699,4 @@ jobs:
           method: 'POST'
           customHeaders: '{"Content-Type": "application/json"}'
           data: '{"uuid": "${{ inputs.uuid }}", "status": "Generation cancelled, try again"}'
+
