@@ -262,15 +262,13 @@ jobs:
           # ./flutter/pubspec.yaml
           #sed -i '/intl:/a \ \ archive: ^3.6.1' ./flutter/pubspec.yaml
 
-             - name: allow custom.txt
+     - name: allow custom.txt
           continue-on-error: true
           run: |
-            Invoke-WebRequest -Uri 
-  https://raw.githubusercontent.com/bryangerlach/rdgen/refs/heads/master/.github/patches/allowCustom.py -OutFile allowCustom.py
-            python allowCustom.py
+            Invoke-WebRequest -Uri https://raw.githubusercontent.com/bryangerlach/rdgen/refs/heads/master/.github/patches/allowCustom.py -OutFile allowCustom.py python allowCustom.py
             # Remove Setup Server Tip
-          Invoke-WebRequest -Uri https://raw.githubusercontent.com/bryangerlach/rdgen/refs/heads/master/.github/patches/removeSetupServerTip.diff -OutFile removeSetupServerTip.diff
-          git apply removeSetupServerTip.diff
+            Invoke-WebRequest -Uri https://raw.githubusercontent.com/bryangerlach/rdgen/refs/heads/master/.github/patches/removeSetupServerTip.diff -OutFile removeSetupServerTip.diff
+            git apply removeSetupServerTip.diff
 
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v1
