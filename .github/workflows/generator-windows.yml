@@ -425,9 +425,22 @@ jobs:
         continue-on-error: true
         if: fromJson(inputs.extras).removeNewVersionNotif == 'true'
         shell: bash
-        run: | 
+        run: |
           sed -i -e 's|updateUrl.isNotEmpty|false|' ./flutter/lib/desktop/pages/desktop_home_page.dart
           sed -i '/let (request, url) =/,/Ok(())/{/Ok(())/!d}' ./src/common.rs
+
+      - name: customize privacy mode text
+        continue-on-error: true
+        if: ${{ fromJson(inputs.extras).privacyModeText != '' }}
+        shell: bash
+        run: |
+          PRIVACY_TEXT="${{ fromJson(inputs.extras).privacyModeText }}"
+          echo "Replacing privacy mode text with: $PRIVACY_TEXT"
+          # Replace in Rust lang files
+          find ./src/lang -name "*.rs" -exec sed -i "s|Privacy mode, all operations are hidden|$PRIVACY_TEXT|g" {} \;
+          # Update the translation key value
+          sed -i "s|(\"Privacy mode\", \"\")|(\"Privacy mode\", \"$PRIVACY_TEXT\")|g" ./src/lang/template.rs
+          echo "Privacy mode text replacement complete"
 
       # - name: run as admin
       #   continue-on-error: true
