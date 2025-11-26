@@ -430,7 +430,7 @@ jobs:
       - name: Create custom.txt file
         shell: bash
         run: |
-          echo -n "${{ inputs.custom }}" | base64 -d > ./Release/custom.txt
+          echo -n "${{ inputs.custom }}" | cat > ./Release/custom.txt
 
       - name: Build self-extracted executable
         shell: bash
