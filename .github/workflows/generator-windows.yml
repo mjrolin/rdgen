@@ -144,7 +144,13 @@ jobs:
         shell: bash
         run: |
           curl -L -o jsign.jar https://github.com/ebourg/jsign/releases/download/6.0/jsign-6.0.jar
-          echo "${{ secrets.SIGNING_CERT }}" | base64 -d > signing_cert.pem
+          echo "Jsign downloaded"
+
+      - name: Setup signing certificate
+        shell: pwsh
+        run: |
+          $cert = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String("${{ secrets.SIGNING_CERT }}"))
+          $cert | Out-File -FilePath signing_cert.pem -Encoding ASCII -NoNewline
 
       - name: Set rdgen value
         if: ${{ fromJson(inputs.extras).rdgen == 'true' }}
