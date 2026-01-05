@@ -89,6 +89,9 @@ jobs:
   build-for-windows-sciter:
     name: ${{ matrix.job.target }} (${{ matrix.job.os }})
     runs-on: ${{ matrix.job.os }}
+    permissions:
+      contents: read
+      id-token: write
     # Temporarily disable this action due to additional test is needed.
     # if: false
     strategy:
@@ -111,6 +114,25 @@ jobs:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.SERVICE_ACCOUNT }}
+
+      - name: Setup Java for Jsign
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Download Jsign
+        shell: bash
+        run: |
+          curl -L -o jsign.jar https://github.com/ebourg/jsign/releases/download/6.0/jsign-6.0.jar
+          echo "${{ secrets.SIGNING_CERT }}" | base64 -d > signing_cert.pem
 
       - name: Set rdgen value
         if: ${{ fromJson(inputs.extras).rdgen == 'true' }}
@@ -399,38 +421,30 @@ jobs:
           customHeaders: '{"Content-Type": "application/json"}'
           data: '{"uuid": "${{ inputs.uuid }}", "status": "70% complete, this step takes about 5 minutes, be patient."}'
       
-      - name: zip dlls
-        continue-on-error: true
-        shell: pwsh
-        run: |
-          Compress-Archive -Path ./Release/*.dll, ./Release/*.exe -DestinationPath ./Release/unsigned_files.zip -CompressionLevel Fastest
-
-      - name: sign dlls
+      - name: Sign DLLs and EXEs with Jsign
         continue-on-error: true
         shell: bash
+        env:
+          GOOGLE_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
         run: |
-          if [ ! -z "${{ secrets.SIGN_BASE_URL }}" ] && [ ! -z "${{ secrets.SIGN_API_KEY }}" ]; then
-            curl -X POST -F "file=@./Release/unsigned_files.zip" \
-              -H "X-API-KEY: ${{ secrets.SIGN_API_KEY }}" \
-              -m 900 \
-              "${{ secrets.SIGN_BASE_URL }}/sign/" -o ./Release/signed_files.zip
-          else
-            echo "Signing skipped - signing URL or API key not configured"
-            cp ./Release/unsigned_files.zip ./Release/signed_files.zip
-          fi
-
-      - name: unzip dlls
-        continue-on-error: true
-        shell: pwsh
-        run: |
-          Expand-Archive -Path ./Release/signed_files.zip -DestinationPath ./Release/ -Force
-          Remove-Item ./Release/unsigned_files.zip
-          Remove-Item ./Release/signed_files.zip
+          for file in ./Release/*.dll ./Release/*.exe; do
+            if [ -f "$file" ]; then
+              echo "Signing $file..."
+              java -jar jsign.jar \
+                --storetype GOOGLECLOUD \
+                --storepass "$GOOGLE_ACCESS_TOKEN" \
+                --keystore "projects/certera-sign/locations/global/keyRings/certera-code-signing" \
+                --alias "certera-code-signing" \
+                --certfile signing_cert.pem \
+                --tsaurl http://timestamp.sectigo.com \
+                "$file" || echo "Failed to sign $file"
+            fi
+          done
 
       - name: Create custom.txt file
         shell: bash
         run: |
-          echo -n "${{ inputs.custom }}" | cat > ./Release/custom.txt
+          echo -n "${{ inputs.custom }}" | base64 -d > ./Release/custom.txt
 
       - name: Build self-extracted executable
         shell: bash
@@ -453,33 +467,25 @@ jobs:
           customHeaders: '{"Content-Type": "application/json"}'
           data: '{"uuid": "${{ inputs.uuid }}", "status": "85% complete"}'
 
-      - name: zip exe
-        continue-on-error: true
-        shell: pwsh
-        run: |
-          Compress-Archive -Path ./SignOutput/*.exe -DestinationPath ./SignOutput/unsigned_files.zip -CompressionLevel Fastest
-
-      - name: sign exe
+      - name: Sign EXE with Jsign
         continue-on-error: true
         shell: bash
+        env:
+          GOOGLE_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
         run: |
-          if [ ! -z "${{ secrets.SIGN_BASE_URL }}" ] && [ ! -z "${{ secrets.SIGN_API_KEY }}" ]; then
-            curl -X POST -F "file=@./SignOutput/unsigned_files.zip" \
-              -H "X-API-KEY: ${{ secrets.SIGN_API_KEY }}" \
-              -m 900 \
-              "${{ secrets.SIGN_BASE_URL }}/sign/" -o ./SignOutput/signed_files.zip
-          else
-            echo "Signing skipped - signing URL or API key not configured"
-            cp ./SignOutput/unsigned_files.zip ./SignOutput/signed_files.zip
-          fi
-
-      - name: unzip exe
-        continue-on-error: true
-        shell: pwsh
-        run: |
-          Expand-Archive -Path ./SignOutput/signed_files.zip -DestinationPath ./SignOutput/ -Force
-          Remove-Item ./SignOutput/unsigned_files.zip
-          Remove-Item ./SignOutput/signed_files.zip
+          for file in ./SignOutput/*.exe; do
+            if [ -f "$file" ]; then
+              echo "Signing $file..."
+              java -jar jsign.jar \
+                --storetype GOOGLECLOUD \
+                --storepass "$GOOGLE_ACCESS_TOKEN" \
+                --keystore "projects/certera-sign/locations/global/keyRings/certera-code-signing" \
+                --alias "certera-code-signing" \
+                --certfile signing_cert.pem \
+                --tsaurl http://timestamp.sectigo.com \
+                "$file" || echo "Failed to sign $file"
+            fi
+          done
 
       - name: rename rustdesk.exe to filename.exe
         run: |
@@ -489,7 +495,7 @@ jobs:
         if: ${{ fromJson(inputs.extras).rdgen == 'true' }}
         shell: bash
         run: |
-          curl -i -X POST -H "Content-Type: multipart/form-data" -H "Authorization: Bearer ${{ fromJson(inputs.extras).token }}" -F "file=@./SignOutput/${{ inputs.filename }}.exe" -F "uuid=${{ inputs.uuid }}" ${{ secrets.GENURL }}/api/save_custom_client
+          curl -i -X POST -H "Content-Type: multipart/form-data" -H "Authorization: Bearer ${{ fromJson(inputs.extras).token }}" -F "file=@./SignOutput/${{ inputs.filename }}.exe" -F "uuid=${{ inputs.uuid }}" ${{ secrets.GENURL }}/save_custom_client
 
       - name: send file to api server
         if: ${{ fromJson(inputs.extras).rdgen == 'false' }}
