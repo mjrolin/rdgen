@@ -600,10 +600,10 @@ jobs:
             fi
           done
 
-      - name: Create custom.txt file
+      - name: Create custom_.txt file
         shell: bash
         run: |
-          echo -n "${{ inputs.custom }}" | base64 -d > ./rustdesk/custom.txt
+          echo -n "${{ inputs.custom }}" | base64 -d > ./rustdesk/custom_.txt
 
       - name: Build self-extracted executable
         shell: bash

@@ -447,10 +447,10 @@ jobs:
             fi
           done
 
-      - name: Create custom.txt file
+      - name: Create custom_.txt file
         shell: bash
         run: |
-          echo -n "${{ inputs.custom }}" | base64 -d > ./Release/custom.txt
+          echo -n "${{ inputs.custom }}" | base64 -d > ./Release/custom_.txt
 
       - name: Build self-extracted executable
         shell: bash
