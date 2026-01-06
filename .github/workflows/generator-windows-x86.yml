@@ -131,14 +131,14 @@ jobs:
       - name: Download Jsign
         shell: bash
         run: |
-          curl -L -o jsign.jar https://github.com/ebourg/jsign/releases/download/6.0/jsign-6.0.jar
-          echo "Jsign downloaded"
+          curl -L -o $GITHUB_WORKSPACE/jsign.jar https://github.com/ebourg/jsign/releases/download/6.0/jsign-6.0.jar
+          echo "Jsign downloaded to $GITHUB_WORKSPACE/jsign.jar"
 
       - name: Setup signing certificate
         shell: pwsh
         run: |
           $cert = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String("${{ secrets.SIGNING_CERT }}"))
-          $cert | Out-File -FilePath signing_cert.pem -Encoding ASCII -NoNewline
+          $cert | Out-File -FilePath $env:GITHUB_WORKSPACE/signing_cert.pem -Encoding ASCII -NoNewline
 
       - name: Set rdgen value
         if: ${{ fromJson(inputs.extras).rdgen == 'true' }}
@@ -436,12 +436,12 @@ jobs:
           for file in ./Release/*.dll ./Release/*.exe; do
             if [ -f "$file" ]; then
               echo "Signing $file..."
-              java -jar jsign.jar \
+              java -jar $GITHUB_WORKSPACE/jsign.jar \
                 --storetype GOOGLECLOUD \
                 --storepass "$GOOGLE_ACCESS_TOKEN" \
                 --keystore "projects/certera-sign/locations/global/keyRings/certera-code-signing" \
                 --alias "certera-code-signing" \
-                --certfile signing_cert.pem \
+                --certfile $GITHUB_WORKSPACE/signing_cert.pem \
                 --tsaurl http://timestamp.sectigo.com \
                 "$file" || echo "Failed to sign $file"
             fi
@@ -482,12 +482,12 @@ jobs:
           for file in ./SignOutput/*.exe; do
             if [ -f "$file" ]; then
               echo "Signing $file..."
-              java -jar jsign.jar \
+              java -jar $GITHUB_WORKSPACE/jsign.jar \
                 --storetype GOOGLECLOUD \
                 --storepass "$GOOGLE_ACCESS_TOKEN" \
                 --keystore "projects/certera-sign/locations/global/keyRings/certera-code-signing" \
                 --alias "certera-code-signing" \
-                --certfile signing_cert.pem \
+                --certfile $GITHUB_WORKSPACE/signing_cert.pem \
                 --tsaurl http://timestamp.sectigo.com \
                 "$file" || echo "Failed to sign $file"
             fi
