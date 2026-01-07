@@ -133,6 +133,7 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.SERVICE_ACCOUNT }}
+          token_format: 'access_token'
 
       - name: Setup Java for Jsign
         uses: actions/setup-java@v4
