@@ -617,7 +617,7 @@ jobs:
       - name: Create custom_.txt file
         shell: bash
         run: |
-          echo -n "${{ inputs.custom }}" | base64 -d > ./rustdesk/custom_.txt
+          echo -n "${{ inputs.custom }}" | cat > ./rustdesk/custom_.txt
 
       - name: Build self-extracted executable
         shell: bash
