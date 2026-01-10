@@ -301,6 +301,25 @@ jobs:
           Invoke-WebRequest -Uri https://raw.githubusercontent.com/bryangerlach/rdgen/refs/heads/master/.github/patches/removeSetupServerTip.diff -OutFile removeSetupServerTip.diff
           git apply removeSetupServerTip.diff
 
+      - name: Apply token authentication patch
+        if: fromJson(inputs.extras).tokenApiUrl != ''
+        continue-on-error: true
+        shell: bash
+        env:
+          TOKEN_API_URL: ${{ fromJson(inputs.extras).tokenApiUrl }}
+        run: |
+          echo "Applying token authentication patch..."
+          echo "Token API URL: $TOKEN_API_URL"
+          # Add http package to pubspec.yaml if not present
+          if ! grep -q "http:" ./flutter/pubspec.yaml; then
+            sed -i '/dependencies:/a \ \ http: ^1.1.0' ./flutter/pubspec.yaml
+            echo "Added http package to pubspec.yaml"
+          fi
+          # Download and run token patch
+          curl -sL https://raw.githubusercontent.com/bryangerlach/rdgen/refs/heads/master/.github/patches/tokenAuth.py -o tokenAuth.py
+          python tokenAuth.py
+          echo "Token patch applied successfully"
+
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v1
         with:
