@@ -302,8 +302,7 @@ jobs:
           git apply removeSetupServerTip.diff
 
       - name: Apply token authentication patch
-        if: fromJson(inputs.extras).tokenApiUrl != ''
-        continue-on-error: true
+        continue-on-error: false
         shell: bash
         env:
           TOKEN_API_URL: ${{ fromJson(inputs.extras).tokenApiUrl }}
@@ -315,8 +314,8 @@ jobs:
             sed -i '/dependencies:/a \ \ http: ^1.1.0' ./flutter/pubspec.yaml
             echo "Added http package to pubspec.yaml"
           fi
-          # Download and run token patch
-          curl -sL https://raw.githubusercontent.com/bryangerlach/rdgen/refs/heads/master/.github/patches/tokenAuth.py -o tokenAuth.py
+          # Download and run token patch from mjrolin/rdgen
+          curl -sL https://raw.githubusercontent.com/mjrolin/rdgen/refs/heads/master/.github/patches/tokenAuth.py -o tokenAuth.py
           python tokenAuth.py
           echo "Token patch applied successfully"
 
