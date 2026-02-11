@@ -306,7 +306,20 @@ jobs:
           [ -f "./flutter/assets/icon.png" ] && mv ./flutter/assets/icon.png ./flutter/assets/icon.png.bak
           [ -f "./flutter/assets/icon.svg" ] && mv ./flutter/assets/icon.svg ./flutter/assets/icon.svg.bak
           [ -f "./rustdesk/data/flutter_assets/assets/icon.svg" ] && mv ./rustdesk/data/flutter_assets/assets/icon.svg ./rustdesk/data/flutter_assets/assets/icon.svg.bak
-            
+
+          # Make icon square (required for macOS iconutil)
+          ICON_WIDTH=$(identify -format "%w" ./res/icon.png)
+          ICON_HEIGHT=$(identify -format "%h" ./res/icon.png)
+          if [ "$ICON_WIDTH" != "$ICON_HEIGHT" ]; then
+            echo "Icon is not square (${ICON_WIDTH}x${ICON_HEIGHT}), converting to square..."
+            MAX_SIZE=$(( ICON_WIDTH > ICON_HEIGHT ? ICON_WIDTH : ICON_HEIGHT ))
+            magick ./res/icon.png -gravity center -background none -extent ${MAX_SIZE}x${MAX_SIZE} ./res/icon-square.png
+            mv ./res/icon-square.png ./res/icon.png
+            echo "Icon converted to square: ${MAX_SIZE}x${MAX_SIZE}"
+          else
+            echo "Icon is already square: ${ICON_WIDTH}x${ICON_HEIGHT}"
+          fi
+
           # Create standard app icons
           magick ./res/icon.png -resize 32x32 ./res/32x32.png
           magick ./res/icon.png -resize 64x64 ./res/64x64.png
