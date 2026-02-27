@@ -636,7 +636,6 @@ jobs:
         uses: microsoft/setup-msbuild@v2
 
       - name: Build msi
-        continue-on-error: true
         if: env.UPLOAD_ARTIFACT == 'true'
         run: |
           $myappname = "${{ inputs.appname }}" -replace '\s','_'
