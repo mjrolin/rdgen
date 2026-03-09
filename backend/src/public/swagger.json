@@ -1,0 +1,774 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "RDGen API - RustDesk Custom Client Builder",
+    "version": "1.0.0",
+    "description": "API para construção customizada de clientes RustDesk com branding próprio e configurações personalizadas",
+    "contact": {
+      "name": "API Support",
+      "url": "https://rdgen.nextcoreti.com.br"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://rdgen.nextcoreti.com.br",
+      "description": "Servidor de Produção"
+    },
+    {
+      "url": "http://localhost:3001",
+      "description": "Servidor de Desenvolvimento"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Build",
+      "description": "Endpoints para gerenciar builds de clientes RustDesk"
+    },
+    {
+      "name": "Upload",
+      "description": "Endpoints para upload de ícones e logos"
+    },
+    {
+      "name": "Auth",
+      "description": "Autenticação de usuários do painel"
+    },
+    {
+      "name": "API Keys",
+      "description": "Gerenciamento de chaves de API (multi-tenant)"
+    },
+    {
+      "name": "Token",
+      "description": "Geração de tokens de conexão temporários"
+    }
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": ["Build"],
+        "summary": "Health check do serviço",
+        "description": "Verifica se a API está funcionando",
+        "responses": {
+          "200": {
+            "description": "Serviço funcionando normalmente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "status": { "type": "string", "example": "healthy" },
+                        "mockMode": { "type": "boolean", "example": false },
+                        "timestamp": { "type": "string", "format": "date-time" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/build": {
+      "post": {
+        "tags": ["Build"],
+        "summary": "Iniciar novo build",
+        "description": "Cria e inicia um novo build de cliente RustDesk customizado",
+        "security": [
+          { "ApiKeyAuth": [] },
+          { "BearerAuth": [] }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/BuildConfig" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Build iniciado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/BuildJob" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/RateLimitExceeded" }
+        }
+      }
+    },
+    "/api/status/{jobId}": {
+      "get": {
+        "tags": ["Build"],
+        "summary": "Consultar status do build",
+        "description": "Retorna o status atual de um build específico",
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" },
+            "description": "ID do job de build"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status do build",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/BuildJob" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/artifact/{jobId}": {
+      "get": {
+        "tags": ["Build"],
+        "summary": "Download do artefato",
+        "description": "Faz download do executável/instalador gerado",
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["exe", "msi", "deb", "rpm", "rpm-suse", "appimage", "pkg", "dmg-x64", "dmg-arm64"],
+              "default": "exe"
+            },
+            "description": "Tipo de artefato para download"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Arquivo binário do artefato",
+            "content": {
+              "application/octet-stream": {
+                "schema": { "type": "string", "format": "binary" }
+              }
+            }
+          },
+          "400": { "description": "Build não completado ainda" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/jobs": {
+      "get": {
+        "tags": ["Build"],
+        "summary": "Listar todos os builds",
+        "description": "Retorna lista de todos os jobs de build",
+        "responses": {
+          "200": {
+            "description": "Lista de builds",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/BuildJob" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cancel/{jobId}": {
+      "post": {
+        "tags": ["Build"],
+        "summary": "Cancelar build",
+        "description": "Cancela um build em andamento",
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Build cancelado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/BuildJob" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Build já finalizado" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/upload/icon": {
+      "post": {
+        "tags": ["Upload"],
+        "summary": "Upload de ícone",
+        "description": "Faz upload do ícone da aplicação (PNG)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Arquivo PNG (máx 10MB)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ícone processado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "base64": { "type": "string", "description": "Imagem em base64" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/upload/logo": {
+      "post": {
+        "tags": ["Upload"],
+        "summary": "Upload de logo",
+        "description": "Faz upload do logo da aplicação (PNG)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Arquivo PNG (máx 10MB)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Logo processado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "base64": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Login no painel",
+        "description": "Autenticação para acesso ao painel web",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["username", "password"],
+                "properties": {
+                  "username": { "type": "string", "example": "admin" },
+                  "password": { "type": "string", "example": "password" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login bem-sucedido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "token": { "type": "string" },
+                        "user": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/me": {
+      "get": {
+        "tags": ["API Keys"],
+        "summary": "Informações da minha API key",
+        "description": "Retorna informações sobre a API key utilizada",
+        "security": [{ "ApiKeyAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Informações da API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "tenantId": { "type": "string" },
+                        "name": { "type": "string" },
+                        "rateLimit": { "type": "number" },
+                        "buildsToday": { "type": "number" },
+                        "expiresAt": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/me/builds": {
+      "get": {
+        "tags": ["API Keys"],
+        "summary": "Meus builds",
+        "description": "Lista todos os builds criados com minha API key",
+        "security": [{ "ApiKeyAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Lista de builds",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/BuildJob" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/token/generate": {
+      "post": {
+        "tags": ["Token"],
+        "summary": "Gerar token de conexão",
+        "description": "Gera um token temporário para conexão automática via RustDesk",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["deviceId", "password"],
+                "properties": {
+                  "deviceId": {
+                    "type": "string",
+                    "description": "ID do dispositivo RustDesk",
+                    "example": "123456789"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "Senha temporária do dispositivo",
+                    "example": "abc123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token gerado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "token": {
+                      "type": "string",
+                      "description": "Token de 64 caracteres",
+                      "example": "a1b2c3d4..."
+                    },
+                    "expiresIn": {
+                      "type": "number",
+                      "description": "Tempo de expiração em segundos",
+                      "example": 60
+                    },
+                    "rustdeskUrl": {
+                      "type": "string",
+                      "description": "URL para abrir RustDesk com token",
+                      "example": "rustdesk://connection/new/123456789?token=a1b2c3d4..."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "Chave de API para autenticação multi-tenant"
+      },
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Token de sessão do painel web"
+      }
+    },
+    "schemas": {
+      "BuildConfig": {
+        "type": "object",
+        "required": ["configName", "platform", "version"],
+        "properties": {
+          "platform": {
+            "type": "string",
+            "enum": ["windows", "windows-x86", "linux", "android", "macos"],
+            "description": "Plataforma alvo"
+          },
+          "version": {
+            "type": "string",
+            "description": "Versão do RustDesk",
+            "example": "1.4.5"
+          },
+          "configName": {
+            "type": "string",
+            "description": "Nome da configuração",
+            "example": "Cliente Empresa XYZ"
+          },
+          "appName": {
+            "type": "string",
+            "description": "Nome da aplicação",
+            "example": "RemotoXYZ"
+          },
+          "filename": {
+            "type": "string",
+            "description": "Nome do arquivo gerado",
+            "example": "remotoxyz"
+          },
+          "connectionDirection": {
+            "type": "string",
+            "enum": ["Both", "Incoming", "Outgoing"],
+            "default": "Both"
+          },
+          "disableInstallation": { "type": "boolean", "default": false },
+          "disableSettings": { "type": "boolean", "default": false },
+          "host": {
+            "type": "string",
+            "description": "Endereço do servidor RustDesk",
+            "example": "rustdesk.example.com"
+          },
+          "key": {
+            "type": "string",
+            "description": "Chave pública do servidor"
+          },
+          "apiServer": {
+            "type": "string",
+            "description": "URL do servidor de API",
+            "example": "https://api.example.com"
+          },
+          "urlLink": { "type": "string" },
+          "downloadLink": { "type": "string" },
+          "companyName": { "type": "string", "example": "Minha Empresa Ltda" },
+          "approveMode": {
+            "type": "string",
+            "enum": ["password", "click", "password-click"],
+            "default": "password-click"
+          },
+          "permanentPassword": { "type": "string" },
+          "denyLanDiscovery": { "type": "boolean", "default": false },
+          "enableDirectIp": { "type": "boolean", "default": false },
+          "autoCloseInactivity": { "type": "boolean", "default": false },
+          "allowHideConnectionWindow": { "type": "boolean", "default": false },
+          "iconBase64": {
+            "type": "string",
+            "description": "Ícone em base64"
+          },
+          "logoBase64": {
+            "type": "string",
+            "description": "Logo em base64"
+          },
+          "theme": {
+            "type": "string",
+            "enum": ["system", "light", "dark"],
+            "default": "system"
+          },
+          "themeMode": {
+            "type": "string",
+            "enum": ["default", "override"],
+            "default": "default"
+          },
+          "permissionsMode": {
+            "type": "string",
+            "enum": ["default", "override"],
+            "default": "default"
+          },
+          "permissionsType": {
+            "type": "string",
+            "enum": ["full", "view", "custom"],
+            "default": "full"
+          },
+          "enableKeyboard": { "type": "boolean", "default": true },
+          "enableClipboard": { "type": "boolean", "default": true },
+          "enableFileTransfer": { "type": "boolean", "default": true },
+          "enableAudio": { "type": "boolean", "default": true },
+          "enableTcp": { "type": "boolean", "default": true },
+          "enableRemoteRestart": { "type": "boolean", "default": true },
+          "enableRecording": { "type": "boolean", "default": true },
+          "enableBlockingInput": { "type": "boolean", "default": true },
+          "enableRemoteConfig": { "type": "boolean", "default": true },
+          "enablePrinter": { "type": "boolean", "default": true },
+          "enableCamera": { "type": "boolean", "default": true },
+          "enableTerminal": { "type": "boolean", "default": true },
+          "customImageQuality": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 50,
+            "description": "Qualidade de imagem (0-100)"
+          },
+          "codecPreference": {
+            "type": "string",
+            "enum": ["vp9", "vp8", "h264", "h265", "av1"],
+            "default": "vp9",
+            "description": "Codec de vídeo preferido"
+          },
+          "enableHwCodec": {
+            "type": "boolean",
+            "default": true,
+            "description": "Habilitar codec de hardware (GPU)"
+          },
+          "fps": {
+            "type": "number",
+            "enum": [15, 30, 60],
+            "default": 30,
+            "description": "Frames por segundo"
+          },
+          "displayMode": {
+            "type": "string",
+            "enum": ["original", "adaptive", "fit"],
+            "default": "adaptive",
+            "description": "Modo de exibição"
+          },
+          "cycleMonitor": { "type": "boolean", "default": false },
+          "xOffline": { "type": "boolean", "default": false },
+          "removeNewVersionNotif": { "type": "boolean", "default": false },
+          "delayFix": { "type": "boolean", "default": false },
+          "showRecentTab": { "type": "boolean", "default": false },
+          "showFavoritesTab": { "type": "boolean", "default": false },
+          "showDiscoveredTab": { "type": "boolean", "default": false },
+          "showAddressBookTab": { "type": "boolean", "default": true },
+          "showMyGroupTab": { "type": "boolean", "default": true },
+          "removeWallpaper": { "type": "boolean", "default": false },
+          "defaultSettings": {
+            "type": "string",
+            "description": "Configurações padrão (key=value por linha)"
+          },
+          "overrideSettings": {
+            "type": "string",
+            "description": "Configurações forçadas (key=value por linha)"
+          }
+        }
+      },
+      "BuildJob": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID único do job"
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID para artefatos"
+          },
+          "config": { "$ref": "#/components/schemas/BuildConfig" },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "queued", "in_progress", "completed", "failed", "cancelled"]
+          },
+          "progress": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Progresso do build (0-100%)"
+          },
+          "statusMessage": { "type": "string" },
+          "logs": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "artifactUrl": { "type": "string", "description": "URL do EXE (Windows)" },
+          "artifactMsiUrl": { "type": "string", "description": "URL do MSI (Windows)" },
+          "artifactDebUrl": { "type": "string", "description": "URL do DEB (Linux)" },
+          "artifactRpmUrl": { "type": "string", "description": "URL do RPM (Linux)" },
+          "artifactRpmSuseUrl": { "type": "string", "description": "URL do RPM SUSE (Linux)" },
+          "artifactAppImageUrl": { "type": "string", "description": "URL do AppImage (Linux)" },
+          "artifactPkgUrl": { "type": "string", "description": "URL do PKG (Linux)" },
+          "artifactDmgX64Url": { "type": "string", "description": "URL do DMG x64 (macOS)" },
+          "artifactDmgArm64Url": { "type": "string", "description": "URL do DMG ARM64 (macOS)" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "completedAt": { "type": "string", "format": "date-time" },
+          "workflowRunId": { "type": "number" },
+          "workflowRunUrl": { "type": "string" }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Requisição inválida",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": { "type": "boolean", "example": false },
+                "error": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Não autorizado - API key ou token inválido",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": { "type": "boolean", "example": false },
+                "error": { "type": "string", "example": "Unauthorized" }
+              }
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Recurso não encontrado",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": { "type": "boolean", "example": false },
+                "error": { "type": "string", "example": "Not found" }
+              }
+            }
+          }
+        }
+      },
+      "RateLimitExceeded": {
+        "description": "Limite de requisições excedido",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": { "type": "boolean", "example": false },
+                "error": { "type": "string", "example": "Rate limit exceeded" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

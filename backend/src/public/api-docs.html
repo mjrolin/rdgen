@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RDGen API Documentation</title>
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.10.0/swagger-ui.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #0a0a0a;
+        }
+
+        .topbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .topbar-wrapper {
+            max-width: 1460px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .topbar-wrapper h1 {
+            margin: 0;
+            color: white;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .topbar-wrapper .info {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+        }
+
+        .swagger-ui .topbar {
+            display: none;
+        }
+
+        .swagger-ui {
+            max-width: 1460px;
+            margin: 0 auto;
+        }
+
+        .swagger-ui .info {
+            margin: 30px 0;
+        }
+
+        .swagger-ui .info .title {
+            font-size: 36px;
+            color: #fff;
+        }
+
+        .swagger-ui .scheme-container {
+            background: #1a1a1a;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* Dark theme customization */
+        .swagger-ui {
+            filter: invert(88%) hue-rotate(180deg);
+        }
+
+        .swagger-ui .microlight {
+            filter: invert(100%) hue-rotate(180deg);
+        }
+
+        .swagger-ui img {
+            filter: invert(100%) hue-rotate(180deg);
+        }
+
+        .custom-header {
+            background: #1a1a1a;
+            padding: 40px 20px;
+            text-align: center;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .custom-header h1 {
+            color: #fff;
+            font-size: 42px;
+            margin: 0 0 10px 0;
+        }
+
+        .custom-header p {
+            color: #aaa;
+            font-size: 18px;
+            margin: 0;
+        }
+
+        .quick-links {
+            background: #1a1a1a;
+            padding: 30px 20px;
+            max-width: 1460px;
+            margin: 0 auto 30px;
+            border-radius: 8px;
+        }
+
+        .quick-links h2 {
+            color: #fff;
+            margin: 0 0 20px 0;
+            font-size: 20px;
+        }
+
+        .quick-links .links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .quick-links .link-card {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            transition: transform 0.2s;
+        }
+
+        .quick-links .link-card:hover {
+            transform: translateX(5px);
+        }
+
+        .quick-links .link-card h3 {
+            color: #667eea;
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+
+        .quick-links .link-card p {
+            color: #ccc;
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .quick-links .link-card code {
+            background: #1a1a1a;
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #f39c12;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="custom-header">
+        <h1>🚀 RDGen API Documentation</h1>
+        <p>Build custom RustDesk clients with your own branding and configuration</p>
+    </div>
+
+    <div class="quick-links">
+        <h2>📚 Guia Rápido de Integração</h2>
+        <div class="links">
+            <div class="link-card">
+                <h3>🔑 Autenticação</h3>
+                <p>Use header <code>X-API-Key</code> para autenticação multi-tenant ou <code>Authorization: Bearer</code> para sessão web.</p>
+            </div>
+            <div class="link-card">
+                <h3>🏗️ Iniciar Build</h3>
+                <p>POST <code>/api/build</code> com BuildConfig no body. Retorna jobId para acompanhamento.</p>
+            </div>
+            <div class="link-card">
+                <h3>📊 Acompanhar Status</h3>
+                <p>GET <code>/api/status/{jobId}</code> retorna progresso e status atual do build (0-100%).</p>
+            </div>
+            <div class="link-card">
+                <h3>⬇️ Download</h3>
+                <p>GET <code>/api/artifact/{jobId}?type=exe</code> após status=completed para baixar o executável.</p>
+            </div>
+            <div class="link-card">
+                <h3>🔗 Token de Conexão</h3>
+                <p>POST <code>/api/token/generate</code> gera token temporário para conexão automática via RustDesk.</p>
+            </div>
+            <div class="link-card">
+                <h3>🎨 Display Settings</h3>
+                <p>Configure qualidade de imagem, codec (VP9/H264/H265), FPS (15/30/60) e modo de display.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="swagger-ui"></div>
+
+    <script src="https://unpkg.com/swagger-ui-dist@5.10.0/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5.10.0/swagger-ui-standalone-preset.js"></script>
+    <script>
+        window.onload = function() {
+            const ui = SwaggerUIBundle({
+                url: "/swagger.json",
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "BaseLayout",
+                defaultModelsExpandDepth: 1,
+                defaultModelExpandDepth: 1,
+                docExpansion: "list",
+                filter: true,
+                showRequestHeaders: true,
+                tryItOutEnabled: true
+            });
+
+            window.ui = ui;
+        }
+    </script>
+</body>
+</html>
