@@ -12,3 +12,4 @@ gcp-sa-key.json
 *.pfx
 *.pem
 *.key
+backend/builds/
