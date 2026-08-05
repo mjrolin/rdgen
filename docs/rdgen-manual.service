@@ -1,6 +1,6 @@
 [Unit]
 Description=RDGen Backend - RustDesk Custom Client Generator API
-Documentation=https://github.com/bryangerlach/rdgen
+Documentation=https://github.com/nextcoreti/rdgen
 After=network.target
 
 [Service]

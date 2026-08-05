@@ -141,7 +141,7 @@ custom: customBase64,
 ## Patches Aplicados
 
 ### allowCustom.py
-- **Origem:** `https://raw.githubusercontent.com/bryangerlach/rdgen/master/.github/patches/allowCustom.py`
+- **Origem:** `https://raw.githubusercontent.com/nextcoreti/rdgen/master/.github/patches/allowCustom.py`
 - **Função:** Remove a verificação de assinatura criptográfica do `custom_.txt`
 - **Modifica:** `src/common.rs`
 - **Também:** Renomeia `custom.txt` → `custom_.txt` (compatibilidade com driver de impressora)
@@ -220,4 +220,4 @@ echo "STRING_BASE64" | base64 -d
 Para dúvidas ou problemas relacionados, verificar:
 1. Logs do GitHub Actions
 2. Conteúdo do `custom_.txt` no workflow
-3. Comparar com implementação do Bryan: `github.com/bryangerlach/rdgen`
+3. Comparar com histórico de patches em `github.com/nextcoreti/rdgen`

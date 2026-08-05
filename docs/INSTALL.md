@@ -14,7 +14,7 @@ apt update && apt install -y nodejs npm nginx python3-nacl
 
 ## 2. Fork do Repositório
 
-Fazer fork de `https://github.com/bryangerlach/rdgen` para sua conta GitHub.
+Repositório oficial: `https://github.com/nextcoreti/rdgen`.
 
 ## 3. Clonar e Estruturar
 
@@ -23,7 +23,7 @@ mkdir -p /opt/rdgen/rdgen-real
 cd /opt/rdgen/rdgen-real
 
 # Clonar referência
-git clone https://github.com/bryangerlach/rdgen /tmp/rdgen-ref
+git clone git@github-rdgen:nextcoreti/rdgen.git /tmp/rdgen-ref
 ```
 
 ## 4. Backend (Express.js)

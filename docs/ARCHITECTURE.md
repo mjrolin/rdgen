@@ -230,7 +230,7 @@ server {
 |------|-----------|
 | `mjrolin/rdgen` | Workflows e patches |
 | `mjrolin/rustdesk` | Fork do RustDesk (source) |
-| `bryangerlach/rdgen` | RDGen original (referência) |
+| `nextcoreti/rdgen` | Repositório oficial |
 | `rustdesk/rustdesk` | RustDesk oficial |
 
 ## Troubleshooting

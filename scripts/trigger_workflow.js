@@ -8,7 +8,7 @@
  *
  * Environment Variables:
  *   GITHUB_TOKEN - GitHub Personal Access Token with repo and workflow permissions
- *   GITHUB_OWNER - GitHub username/organization (default: bryangerlach)
+ *   GITHUB_OWNER - GitHub username/organization (default: nextcoreti)
  *   GITHUB_REPO  - GitHub repository name (default: rdgen)
  */
 
@@ -27,7 +27,7 @@ for (let i = 0; i < args.length; i += 2) {
 
 // Configuration
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-const GITHUB_OWNER = process.env.GITHUB_OWNER || 'bryangerlach';
+const GITHUB_OWNER = process.env.GITHUB_OWNER || 'nextcoreti';
 const GITHUB_REPO = process.env.GITHUB_REPO || 'rdgen';
 
 if (!GITHUB_TOKEN) {

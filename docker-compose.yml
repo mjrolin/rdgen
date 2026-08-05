@@ -26,7 +26,7 @@ services:
       - PORT=4000
       - NODE_ENV=production
       - GITHUB_TOKEN=${GITHUB_TOKEN}
-      - GITHUB_OWNER=${GITHUB_OWNER:-bryangerlach}
+      - GITHUB_OWNER=${GITHUB_OWNER:-nextcoreti}
       - GITHUB_REPO=${GITHUB_REPO:-rdgen}
       - GEN_URL=${GEN_URL:-http://localhost:5000}
       - UPLOADS_DIR=/app/uploads

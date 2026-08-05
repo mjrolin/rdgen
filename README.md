@@ -51,4 +51,5 @@ rdgen-real/
 
 ## License
 
-See original project: https://github.com/bryangerlach/rdgen
+Repository: https://github.com/nextcoreti/rdgen  
+Published at: https://rdgen.nextcoreti.com.br/

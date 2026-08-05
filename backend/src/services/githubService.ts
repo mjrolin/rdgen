@@ -15,7 +15,7 @@ if (!MOCK_MODE) {
   });
 }
 
-const OWNER = process.env.GITHUB_OWNER || 'bryangerlach';
+const OWNER = process.env.GITHUB_OWNER || 'nextcoreti';
 const REPO = process.env.GITHUB_REPO || 'rdgen';
 const GEN_URL = process.env.GEN_URL || 'http://localhost:5000';
 
@@ -107,7 +107,7 @@ async function simulateBuildProgress(jobId: string): Promise<void> {
         statusMessage: 'Success',
         artifactUrl: `/api/artifact/${jobId}?type=exe`,
         artifactMsiUrl: `/api/artifact/${jobId}?type=msi`,
-        workflowRunUrl: 'https://github.com/bryangerlach/rdgen/actions',
+        workflowRunUrl: 'https://github.com/nextcoreti/rdgen/actions',
       });
     } else {
       updateJobStatus(jobId, 'in_progress', stage.message, stage.progress);

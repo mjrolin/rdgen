@@ -92,8 +92,8 @@ npm start
 
 ### Step 1: Fork the RDGen Repository
 
-1. Go to https://github.com/bryangerlach/rdgen
-2. Click "Fork" to create your own copy
+1. Go to https://github.com/nextcoreti/rdgen
+2. This is the official RDGen repository
 3. This repository contains the GitHub Actions workflows needed for building
 
 ### Step 2: Create GitHub Personal Access Token
@@ -183,7 +183,7 @@ curl http://localhost:5000/api/health
 
 ## GitHub Setup Checklist
 
-- [ ] Fork https://github.com/bryangerlach/rdgen
+- [ ] Repository: https://github.com/nextcoreti/rdgen
 - [ ] Create Personal Access Token with `repo` and `workflow` scopes
 - [ ] Add `GENURL` secret to forked repository
 - [ ] Configure `.env` file on your server
@@ -204,9 +204,9 @@ curl http://localhost:5000/api/health
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `GITHUB_TOKEN` | GitHub PAT with repo/workflow permissions | Required |
-| `GITHUB_OWNER` | GitHub username/organization | `bryangerlach` |
+| `GITHUB_OWNER` | GitHub username/organization | `nextcoreti` |
 | `GITHUB_REPO` | Repository name | `rdgen` |
-| `GEN_URL` | Public URL of this server | `http://localhost:5000` |
+| `GEN_URL` | Public URL of this server | `https://rdgen.nextcoreti.com.br` |
 | `PORT` | Port to listen on | `5000` |
 | `LOG_LEVEL` | Logging level | `info` |
 | `NODE_ENV` | Environment mode | `production` |
@@ -311,5 +311,4 @@ This project is open source. See the original RDGen repository for license detai
 
 ## Credits
 
-- Original RDGen by [Bryan Gerlach](https://github.com/bryangerlach/rdgen)
 - RustDesk project: https://rustdesk.com
