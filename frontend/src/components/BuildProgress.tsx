@@ -386,8 +386,19 @@ export default function BuildProgress({ jobId, onComplete, onError, showDetails 
                 Download DMG (Apple Silicon)
               </a>
             )}
+            {/* Android */}
+            {job.artifactApkUrl && (
+              <a
+                href={job.artifactApkUrl}
+                className="btn-primary inline-flex items-center gap-2 text-sm px-6 py-2"
+                download
+              >
+                <i className="fas fa-download"></i>
+                Download APK
+              </a>
+            )}
           </div>
-          {!job.artifactUrl && !job.artifactMsiUrl && !job.artifactDebUrl && !job.artifactRpmUrl && !job.artifactAppImageUrl && !job.artifactPkgUrl && !job.artifactDmgX64Url && !job.artifactDmgArm64Url && (
+          {!job.artifactUrl && !job.artifactMsiUrl && !job.artifactDebUrl && !job.artifactRpmUrl && !job.artifactAppImageUrl && !job.artifactPkgUrl && !job.artifactDmgX64Url && !job.artifactDmgArm64Url && !job.artifactApkUrl && (
             <p className="text-yellow-400 text-sm mt-2">
               <i className="fas fa-exclamation-triangle mr-1"></i>
               Download links not available yet. Please wait...

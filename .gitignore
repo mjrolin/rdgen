@@ -1,0 +1,14 @@
+node_modules/
+.next/
+dist/
+backend/data/
+backend/uploads/
+.env
+.env.local
+*.env
+!.env.example
+*.log
+gcp-sa-key.json
+*.pfx
+*.pem
+*.key

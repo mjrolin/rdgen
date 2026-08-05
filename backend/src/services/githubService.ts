@@ -266,10 +266,11 @@ async function pollWorkflowStatus(jobId: string, uuid: string): Promise<void> {
       setTimeout(poll, 5000);
     } catch (error: any) {
       logger.error('Error polling workflow status:', error);
-      if (attempts < 3) {
-        setTimeout(poll, 5000);
+      // Keep retrying on poll errors - don't fail the job just because of a transient API error
+      if (attempts < maxAttempts) {
+        setTimeout(poll, 10000); // Wait 10s on error before retrying
       } else {
-        updateJobStatus(jobId, 'failed', `Error checking build status: ${error.message}`, 0);
+        updateJobStatus(jobId, 'failed', `Build timed out`, 0);
       }
     }
   };

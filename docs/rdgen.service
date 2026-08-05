@@ -1,0 +1,27 @@
+[Unit]
+Description=RDGen - RustDesk Custom Client Generator
+Documentation=https://github.com/bryangerlach/rdgen
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/rdgen/rdgen-real
+EnvironmentFile=/opt/rdgen/rdgen-real/.env
+
+# Start with docker-compose
+ExecStart=/usr/bin/docker-compose up
+ExecStop=/usr/bin/docker-compose down
+ExecReload=/usr/bin/docker-compose restart
+
+# Restart policy
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rdgen
+
+[Install]
+WantedBy=multi-user.target

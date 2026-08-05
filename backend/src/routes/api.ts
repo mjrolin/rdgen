@@ -64,7 +64,7 @@ const uploadArtifact = multer({
   storage,
   limits: { fileSize: 200 * 1024 * 1024 }, // 200MB limit for build artifacts
   fileFilter: (req, file, cb) => {
-    const allowedExtensions = ['.exe', '.msi', '.deb', '.rpm', '.appimage', '.flatpak', '.zst', '.dmg'];
+    const allowedExtensions = ['.exe', '.msi', '.deb', '.rpm', '.appimage', '.flatpak', '.zst', '.dmg', '.apk'];
     const ext = path.extname(file.originalname).toLowerCase();
     if (allowedExtensions.includes(ext)) {
       cb(null, true);
@@ -219,6 +219,8 @@ router.get('/artifact/:jobId', (req: Request, res: Response) => {
         return `${baseName}-x86_64.dmg`;
       case 'dmg-arm64':
         return `${baseName}-aarch64.dmg`;
+      case 'apk':
+        return `${baseName}.apk`;
       case 'exe':
       default:
         return `${baseName}.exe`;
@@ -240,7 +242,7 @@ router.get('/artifact/:jobId', (req: Request, res: Response) => {
 
   // Real mode - try to find the artifact
   // For Linux and macOS files, search by extension since filenames may vary
-  const extensionTypes = ['deb', 'rpm', 'rpm-suse', 'appimage', 'pkg', 'dmg-x64', 'dmg-arm64'];
+  const extensionTypes = ['deb', 'rpm', 'rpm-suse', 'appimage', 'pkg', 'dmg-x64', 'dmg-arm64', 'apk'];
 
   if (extensionTypes.includes(typeStr)) {
     const artifact = getBuildArtifactByExtension(job.uuid, typeStr);
@@ -453,6 +455,7 @@ router.post(
     const isAppImage = filename.endsWith('.appimage');
     const isPkg = filename.endsWith('.zst'); // pkg.tar.zst
     const isDmg = filename.endsWith('.dmg');
+    const isApk = filename.endsWith('.apk');
 
     const updates: Partial<BuildJob> = {};
     if (isExe) {
@@ -488,6 +491,9 @@ router.post(
         // Default to x64 if architecture not specified
         updates.artifactDmgX64Url = `/api/artifact/${job.id}?type=dmg-x64`;
       }
+    }
+    if (isApk) {
+      updates.artifactApkUrl = `/api/artifact/${job.id}?type=apk`;
     }
 
     updateJob(job.id, updates);

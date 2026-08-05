@@ -2,6 +2,9 @@ export type Platform = 'windows' | 'windows-x86' | 'linux' | 'android' | 'macos'
 
 export type RustDeskVersion =
   | 'nightly'
+  | '1.4.9'
+  | '1.4.8'
+  | '1.4.7'
   | '1.4.6'
   | '1.4.5'
   | '1.4.4'
@@ -143,6 +146,8 @@ export interface BuildJob {
   // macOS artifacts
   artifactDmgX64Url?: string;
   artifactDmgArm64Url?: string;
+  // Android artifacts
+  artifactApkUrl?: string;
   createdAt: string;
   updatedAt: string;
   completedAt?: string;
@@ -158,7 +163,7 @@ export interface ApiResponse<T> {
 
 export const DEFAULT_BUILD_CONFIG: BuildConfig = {
   platform: 'windows',
-  version: '1.4.6',
+  version: '1.4.9',
   configName: '',
   appName: '',
   filename: '',
@@ -190,7 +195,7 @@ export const DEFAULT_BUILD_CONFIG: BuildConfig = {
   enableRecording: true,
   enableBlockingInput: true,
   enableRemoteConfig: true,
-  enablePrinter: true,
+  enablePrinter: false,
   enableCamera: true,
   enableTerminal: true,
   cycleMonitor: false,
@@ -214,6 +219,9 @@ export const DEFAULT_BUILD_CONFIG: BuildConfig = {
 
 export const RUSTDESK_VERSIONS: RustDeskVersion[] = [
   'nightly',
+  '1.4.9',
+  '1.4.8',
+  '1.4.7',
   '1.4.6',
   '1.4.5',
   '1.4.4',
@@ -286,7 +294,7 @@ export const CONFIG_TEMPLATES: ConfigTemplate[] = [
       enableRecording: true,
       enableBlockingInput: true,
       enableRemoteConfig: true,
-      enablePrinter: true,
+      enablePrinter: false,
       enableCamera: true,
       enableTerminal: true,
       cycleMonitor: false,
@@ -331,7 +339,7 @@ export const CONFIG_TEMPLATES: ConfigTemplate[] = [
       enableRecording: true,
       enableBlockingInput: true,
       enableRemoteConfig: true,
-      enablePrinter: true,
+      enablePrinter: false,
       enableCamera: true,
       enableTerminal: true,
       cycleMonitor: false,
@@ -376,7 +384,7 @@ export const CONFIG_TEMPLATES: ConfigTemplate[] = [
       enableRecording: true,
       enableBlockingInput: true,
       enableRemoteConfig: true,
-      enablePrinter: true,
+      enablePrinter: false,
       enableCamera: true,
       enableTerminal: true,
       cycleMonitor: false,

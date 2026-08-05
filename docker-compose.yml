@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # Frontend - Next.js application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: rdgen-frontend
+    restart: unless-stopped
+    environment:
+      - BACKEND_URL=http://backend:4000
+    depends_on:
+      - backend
+    networks:
+      - rdgen-network
+
+  # Backend - Node.js Express API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rdgen-backend
+    restart: unless-stopped
+    environment:
+      - PORT=4000
+      - NODE_ENV=production
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GITHUB_OWNER=${GITHUB_OWNER:-bryangerlach}
+      - GITHUB_REPO=${GITHUB_REPO:-rdgen}
+      - GEN_URL=${GEN_URL:-http://localhost:5000}
+      - UPLOADS_DIR=/app/uploads
+      - BUILDS_DIR=/app/builds
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - rdgen-uploads:/app/uploads
+      - rdgen-builds:/app/builds
+    networks:
+      - rdgen-network
+
+  # Nginx reverse proxy - combines frontend and backend on single port
+  nginx:
+    image: nginx:alpine
+    container_name: rdgen-nginx
+    restart: unless-stopped
+    ports:
+      - "${PORT:-5000}:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - rdgen-network
+
+volumes:
+  rdgen-uploads:
+  rdgen-builds:
+
+networks:
+  rdgen-network:
+    driver: bridge
