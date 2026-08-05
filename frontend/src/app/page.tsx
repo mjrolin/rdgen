@@ -26,6 +26,7 @@ export default function Home() {
   const [currentJob, setCurrentJob] = useState<BuildJob | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateType | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [clientList, setClientList] = useState<{id: string; name: string}[]>([]);
 
   const updateConfig = (updates: Partial<BuildConfig>) => {
     setConfig((prev) => ({ ...prev, ...updates }));
@@ -127,18 +128,73 @@ export default function Home() {
     }
 
     try {
+      // Find existing client with same name
+      const existingClient = clientList.find(
+        (c) => c.name === config.configName && c.id !== selectedClientId
+      );
+
       if (selectedClientId) {
+        // A client is selected in the dropdown
+        const selectedClient = clientList.find((c) => c.id === selectedClientId);
+
+        if (selectedClient && selectedClient.name !== config.configName) {
+          // Name changed — ask user what to do
+          const choice = window.confirm(
+            `O nome mudou de "${selectedClient.name}" para "${config.configName}".\n\n` +
+            `OK = Criar novo cliente "${config.configName}"\n` +
+            `Cancelar = Atualizar "${selectedClient.name}" com nova versão`
+          );
+
+          if (choice) {
+            const result = await createClient(config.configName, config.host, config);
+            if (result.success && result.data) {
+              setSelectedClientId(result.data.id);
+              toast.success(`Novo perfil "${config.configName}" criado!`);
+            } else {
+              toast.error(result.error || 'Erro ao criar perfil');
+            }
+            return;
+          }
+        }
+
+        // Update existing selected client
         const result = await addClientVersion(selectedClientId, config);
         if (result.success) {
           toast.success('Perfil do cliente atualizado!');
         } else {
           toast.error(result.error || 'Erro ao atualizar perfil');
         }
+      } else if (existingClient) {
+        // No client selected but name matches an existing one
+        const choice = window.confirm(
+          `Já existe um cliente chamado "${config.configName}".\n\n` +
+          `OK = Atualizar "${config.configName}" com nova versão\n` +
+          `Cancelar = Criar novo cliente com mesmo nome`
+        );
+
+        if (choice) {
+          const result = await addClientVersion(existingClient.id, config);
+          if (result.success) {
+            setSelectedClientId(existingClient.id);
+            toast.success('Perfil do cliente atualizado!');
+          } else {
+            toast.error(result.error || 'Erro ao atualizar perfil');
+          }
+        } else {
+          const result = await createClient(config.configName, config.host, config);
+          if (result.success && result.data) {
+            setSelectedClientId(result.data.id);
+            toast.success(`Perfil "${config.configName}" criado!`);
+          } else {
+            toast.error(result.error || 'Erro ao criar perfil');
+          }
+        }
       } else {
+        // No client selected, no name conflict — create new
         const result = await createClient(config.configName, config.host, config);
         if (result.success && result.data) {
           setSelectedClientId(result.data.id);
-          toast.success('Perfil de cliente criado!');
+          toast.success(`Perfil "${config.configName}" criado!`);
         } else {
           toast.error(result.error || 'Erro ao criar perfil');
         }
@@ -170,6 +226,7 @@ export default function Home() {
         onConfigLoad={setConfig}
         selectedClientId={selectedClientId}
         onSelectClient={setSelectedClientId}
+        onClientListChange={setClientList}
       />
 
       <h1 className="text-2xl font-bold text-white text-center mb-6 flex items-center justify-center gap-2">

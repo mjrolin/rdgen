@@ -10,6 +10,7 @@ interface ClientSelectorProps {
   onConfigLoad: (config: BuildConfig) => void;
   selectedClientId: string | null;
   onSelectClient: (clientId: string | null) => void;
+  onClientListChange?: (clients: {id: string; name: string}[]) => void;
 }
 
 export default function ClientSelector({
@@ -17,6 +18,7 @@ export default function ClientSelector({
   onConfigLoad,
   selectedClientId,
   onSelectClient,
+  onClientListChange,
 }: ClientSelectorProps) {
   const [clients, setClients] = useState<ClientListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,6 +56,9 @@ export default function ClientSelector({
     const result = await listClients();
     if (result.success && result.data) {
       setClients(result.data);
+      if (onClientListChange) {
+        onClientListChange(result.data.map((c) => ({ id: c.id, name: c.name })));
+      }
     }
     setLoading(false);
   };
