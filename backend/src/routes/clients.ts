@@ -12,7 +12,6 @@ import logger from '../utils/logger';
 
 const router = Router();
 
-router.use(requireAdmin);
 
 router.get('/', (req: Request, res: Response) => {
   try {
