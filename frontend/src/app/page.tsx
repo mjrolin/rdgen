@@ -119,6 +119,35 @@ export default function Home() {
     setIsBuilding(false);
   };
 
+
+  const handleSaveProfile = async () => {
+    if (!config.configName) {
+      toast.error('Preencha o nome da configuração antes de salvar');
+      return;
+    }
+
+    try {
+      if (selectedClientId) {
+        const result = await addClientVersion(selectedClientId, config);
+        if (result.success) {
+          toast.success('Perfil do cliente atualizado!');
+        } else {
+          toast.error(result.error || 'Erro ao atualizar perfil');
+        }
+      } else {
+        const result = await createClient(config.configName, config.host, config);
+        if (result.success && result.data) {
+          setSelectedClientId(result.data.id);
+          toast.success('Perfil de cliente criado!');
+        } else {
+          toast.error(result.error || 'Erro ao criar perfil');
+        }
+      }
+    } catch {
+      toast.error('Erro ao salvar perfil');
+    }
+  };
+
   const handleNewBuild = () => {
     setCurrentJob(null);
     setIsBuilding(false);
@@ -204,8 +233,21 @@ export default function Home() {
             <DisplaySection config={config} onChange={updateConfig} />
           </div>
 
-          <div className="max-w-5xl mx-auto">
-            <div className="section text-center py-3">
+          {/* Spacer for sticky bar */}
+          <div className="h-20"></div>
+
+          {/* Sticky action bar */}
+          <div className="fixed bottom-0 left-0 right-0 bg-[#111] border-t border-[#333] shadow-lg z-50">
+            <div className="max-w-5xl mx-auto flex items-center justify-between py-3 px-4">
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSaveProfile}
+                  className="btn-secondary px-4 py-2"
+                >
+                  <i className="fas fa-save mr-2"></i>
+                  Salvar Perfil
+                </button>
+              </div>
               <button
                 onClick={handleGenerate}
                 disabled={isBuilding}
@@ -219,7 +261,7 @@ export default function Home() {
                 ) : (
                   <>
                     <i className="fas fa-rocket mr-2"></i>
-                    Generate Client
+                    Gerar Build
                   </>
                 )}
               </button>
