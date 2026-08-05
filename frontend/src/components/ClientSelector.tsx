@@ -25,9 +25,29 @@ export default function ClientSelector({
   const [selectedVersionId, setSelectedVersionId] = useState<string>('');
   const [showPassword, setShowPassword] = useState(false);
 
+  // Load client list on mount
   useEffect(() => {
     loadClients();
   }, []);
+
+  // When selectedClientId changes externally (e.g. after saving a new client),
+  // refresh the list and load the selected client's details
+  useEffect(() => {
+    if (selectedClientId) {
+      loadClients().then(() => {
+        // Load the newly selected client details
+        getClient(selectedClientId).then((result) => {
+          if (result.success && result.data) {
+            setSelectedClient(result.data);
+            setSelectedVersionId(result.data.latestVersionId);
+          }
+        });
+      });
+    } else {
+      setSelectedClient(null);
+      setSelectedVersionId('');
+    }
+  }, [selectedClientId]);
 
   const loadClients = async () => {
     setLoading(true);
