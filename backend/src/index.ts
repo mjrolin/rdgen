@@ -8,6 +8,12 @@ import path from 'path';
 import apiRoutes from './routes/api';
 import { basicAuth } from './middleware/basicAuth';
 import logger from './utils/logger';
+import clientsRoutes from './routes/clients';
+import { ensureClientProfileKey } from './services/cryptoService';
+import { initClientStore } from './services/clientStore';
+
+// Validate CLIENT_PROFILE_KEY at startup (fail-fast if missing/invalid)
+ensureClientProfileKey();
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '4000', 10);
@@ -38,6 +44,9 @@ app.use('/api', basicAuth);
 // API routes
 app.use('/api', apiRoutes);
 
+// Client profiles routes (encrypted client management)
+app.use('/api/clients', clientsRoutes);
+
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   logger.error('Unhandled error:', err);
@@ -56,6 +65,9 @@ app.listen(PORT, '0.0.0.0', () => {
     logger.warn('GITHUB_TOKEN not set - running in mock mode');
     logger.warn('Set GITHUB_TOKEN in .env to enable real GitHub Actions builds');
   }
+
+  // Ensure clients data directory exists
+  initClientStore();
 });
 
 export default app;
