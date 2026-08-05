@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import toast from 'react-hot-toast';
 import { BuildConfig, DEFAULT_BUILD_CONFIG, BuildJob, ConfigTemplate, TemplateType } from '@/types';
-import { startBuild } from '@/lib/api';
+import { startBuild, createClient, addClientVersion } from '@/lib/api';
 import PlatformSelector from '@/components/PlatformSelector';
 import TemplateSelector from '@/components/TemplateSelector';
 import GeneralSection from '@/components/GeneralSection';
@@ -71,16 +71,39 @@ export default function Home() {
     setIsBuilding(true);
     setCurrentJob(null);
 
-    const result = await startBuild({
+    const buildConfig = {
       ...config,
       filename: config.filename || config.configName,
-    });
+    };
 
-    if (result.success && result.data) {
-      setCurrentJob(result.data);
+    // Auto-save client profile (fire-and-forget alongside build)
+    const saveProfile = async () => {
+      try {
+        if (selectedClientId) {
+          const result = await addClientVersion(selectedClientId, buildConfig);
+          if (result.success) {
+            toast.success('Perfil do cliente atualizado', { id: 'profile-save' });
+          }
+        } else if (config.configName) {
+          const result = await createClient(config.configName, config.host, buildConfig);
+          if (result.success && result.data) {
+            setSelectedClientId(result.data.id);
+            toast.success('Perfil de cliente criado', { id: 'profile-save' });
+          }
+        }
+      } catch {
+        console.error('Failed to save client profile');
+      }
+    };
+
+    // Run build and profile save in parallel
+    const [buildResult] = await Promise.all([startBuild(buildConfig), saveProfile()]);
+
+    if (buildResult.success && buildResult.data) {
+      setCurrentJob(buildResult.data);
       toast.success('Build started!');
     } else {
-      toast.error(result.error || 'Failed to start build');
+      toast.error(buildResult.error || 'Failed to start build');
       setIsBuilding(false);
     }
   };
