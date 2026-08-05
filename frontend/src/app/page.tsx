@@ -16,6 +16,7 @@ import CodeChangesSection from '@/components/CodeChangesSection';
 import OtherSection from '@/components/OtherSection';
 import DisplaySection from '@/components/DisplaySection';
 import ConfigManager from '@/components/ConfigManager';
+import ClientSelector from '@/components/ClientSelector';
 import BuildProgress from '@/components/BuildProgress';
 import { LogoutButton } from '@/components/AuthGuard';
 
@@ -24,6 +25,7 @@ export default function Home() {
   const [isBuilding, setIsBuilding] = useState(false);
   const [currentJob, setCurrentJob] = useState<BuildJob | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateType | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 
   const updateConfig = (updates: Partial<BuildConfig>) => {
     setConfig((prev) => ({ ...prev, ...updates }));
@@ -110,6 +112,13 @@ export default function Home() {
       </div>
 
       <ConfigManager config={config} onLoad={setConfig} />
+
+      <ClientSelector
+        currentConfig={config}
+        onConfigLoad={setConfig}
+        selectedClientId={selectedClientId}
+        onSelectClient={setSelectedClientId}
+      />
 
       <h1 className="text-2xl font-bold text-white text-center mb-6 flex items-center justify-center gap-2">
         <i className="fas fa-cogs text-primary text-xl"></i>

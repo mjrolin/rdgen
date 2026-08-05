@@ -409,3 +409,32 @@ export const CONFIG_TEMPLATES: ConfigTemplate[] = [
     config: {},
   },
 ];
+
+// =====================
+// Client Profile types
+// =====================
+
+export interface ClientListItem {
+  id: string;
+  name: string;
+  host: string;
+  versionCount: number;
+  latestVersionId: string;
+  updatedAt: string;
+}
+
+export interface ClientVersionInfo {
+  versionId: string;
+  createdAt: string;
+  label: string;
+}
+
+export interface ClientProfile {
+  id: string;
+  name: string;
+  host: string;
+  createdAt: string;
+  updatedAt: string;
+  latestVersionId: string;
+  versions: ClientVersionInfo[];
+}

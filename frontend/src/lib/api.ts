@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { BuildConfig, BuildJob, ApiResponse } from '@/types';
+import type { BuildConfig, BuildJob, ApiResponse, ClientListItem, ClientProfile } from '@/types';
 
 const api = axios.create({
   baseURL: '/api',
@@ -123,6 +123,100 @@ export async function healthCheck(): Promise<ApiResponse<{ status: string }>> {
     return {
       success: false,
       error: error.response?.data?.error || error.message || 'API is not available',
+    };
+  }
+}
+
+// =====================
+// Client Profile API
+// =====================
+
+export async function listClients(): Promise<ApiResponse<ClientListItem[]>> {
+  try {
+    const response = await api.get<ApiResponse<ClientListItem[]>>('/clients');
+    return response.data;
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.error || error.message || 'Failed to list clients',
+    };
+  }
+}
+
+export async function getClient(clientId: string): Promise<ApiResponse<ClientProfile>> {
+  try {
+    const response = await api.get<ApiResponse<ClientProfile>>(`/clients/${clientId}`);
+    return response.data;
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.error || error.message || 'Failed to get client',
+    };
+  }
+}
+
+export async function getClientVersion(
+  clientId: string,
+  versionId: string
+): Promise<ApiResponse<BuildConfig>> {
+  try {
+    const response = await api.get<ApiResponse<BuildConfig>>(
+      `/clients/${clientId}/versions/${versionId}`
+    );
+    return response.data;
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.error || error.message || 'Failed to get client version',
+    };
+  }
+}
+
+export async function createClient(
+  name: string,
+  host: string,
+  config: BuildConfig
+): Promise<ApiResponse<ClientProfile>> {
+  try {
+    const response = await api.post<ApiResponse<ClientProfile>>('/clients', {
+      name,
+      host,
+      config,
+    });
+    return response.data;
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.error || error.message || 'Failed to create client',
+    };
+  }
+}
+
+export async function addClientVersion(
+  clientId: string,
+  config: BuildConfig
+): Promise<ApiResponse<ClientProfile>> {
+  try {
+    const response = await api.put<ApiResponse<ClientProfile>>(`/clients/${clientId}`, {
+      config,
+    });
+    return response.data;
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.error || error.message || 'Failed to add client version',
+    };
+  }
+}
+
+export async function deleteClient(clientId: string): Promise<ApiResponse<void>> {
+  try {
+    const response = await api.delete<ApiResponse<void>>(`/clients/${clientId}`);
+    return response.data;
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.error || error.message || 'Failed to delete client',
     };
   }
 }
