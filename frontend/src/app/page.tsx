@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
 import toast from 'react-hot-toast';
 import { BuildConfig, DEFAULT_BUILD_CONFIG, BuildJob, ConfigTemplate, TemplateType, ClientDetail } from '@/types';
-import { startBuild, createClient, createProfile, addProfileVersion } from '@/lib/api';
+import { startBuild, createProfile, addProfileVersion } from '@/lib/api';
 import PlatformSelector from '@/components/PlatformSelector';
 import TemplateSelector from '@/components/TemplateSelector';
 import GeneralSection from '@/components/GeneralSection';
@@ -93,22 +93,8 @@ export default function Home() {
       filename: config.filename || config.configName,
     };
 
-    // Auto-save client profile (fire-and-forget alongside build)
-    const saveProfile = async () => {
-      try {
-        if (selectedClientId && selectedProfileId) {
-          const result = await addProfileVersion(selectedClientId, selectedProfileId, buildConfig);
-          if (result.success) {
-            toast.success('Perfil atualizado', { id: 'profile-save' });
-          }
-        }
-      } catch {
-        console.error('Failed to save client profile');
-      }
-    };
-
-    // Run build and profile save in parallel
-    const [buildResult] = await Promise.all([startBuild(buildConfig), saveProfile()]);
+    // Start build only (save is separate via Salvar Perfil button)
+    const buildResult = await startBuild(buildConfig);
 
     if (buildResult.success && buildResult.data) {
       setCurrentJob(buildResult.data);
