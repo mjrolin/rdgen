@@ -63,7 +63,7 @@ const sampleConfig: Record<string, unknown> = {
   displayMode: 'adaptive',
 };
 
-describe('clientStore', () => {
+describe('clientStore (multi-profile model)', () => {
   before(() => {
     process.env.CLIENT_PROFILE_KEY = 'a'.repeat(64);
   });
@@ -77,7 +77,6 @@ describe('clientStore', () => {
   });
 
   beforeEach(() => {
-    // Clean up client JSON files between tests, keep the directory
     if (fs.existsSync(clientsDir)) {
       const files = fs.readdirSync(clientsDir);
       for (const file of files) {
@@ -88,62 +87,127 @@ describe('clientStore', () => {
     }
   });
 
-  it('creates a client and lists it', async () => {
+  it('creates a client with empty profiles and lists it', async () => {
     const { initClientStore, createClient, listClients } = await import('../clientStore');
     initClientStore();
 
-    const client = createClient('mrnery', 'rd01.suporte.net.br', sampleConfig);
+    const client = createClient('NextCoreTI');
 
     assert.ok(client.id, 'client should have an id');
-    assert.strictEqual(client.name, 'mrnery');
-    assert.strictEqual(client.host, 'rd01.suporte.net.br');
-    assert.strictEqual(client.versions.length, 1);
-    assert.ok(client.latestVersionId, 'client should have latestVersionId');
+    assert.strictEqual(client.name, 'NextCoreTI');
+    assert.ok(Array.isArray(client.profiles), 'client should have a profiles array');
+    assert.strictEqual(client.profiles.length, 0);
 
     const clients = listClients();
     assert.strictEqual(clients.length, 1);
-    assert.strictEqual(clients[0].name, 'mrnery');
-    assert.strictEqual(clients[0].versionCount, 1);
-    assert.strictEqual(clients[0].host, 'rd01.suporte.net.br');
+    assert.strictEqual(clients[0].name, 'NextCoreTI');
+    assert.strictEqual(clients[0].profileCount, 0);
   });
 
-  it('adds a new version without overwriting previous', async () => {
-    const { initClientStore, createClient, addClientVersion, getClient } = await import('../clientStore');
+  it('creates a profile under a client', async () => {
+    const { initClientStore, createClient, createProfile, getClient } = await import('../clientStore');
     initClientStore();
 
-    const client = createClient('mrnery', 'rd01.suporte.net.br', sampleConfig);
-    const firstVersionId = client.latestVersionId;
+    const client = createClient('NextCoreTI');
+    const profile = createProfile(client.id, 'Admin', 'rd01.suporte.net.br', 'windows', sampleConfig);
+
+    assert.ok(profile, 'profile should be created');
+    assert.ok(profile!.profileId, 'profile should have a profileId');
+    assert.strictEqual(profile!.name, 'Admin');
+    assert.strictEqual(profile!.host, 'rd01.suporte.net.br');
+    assert.strictEqual(profile!.platform, 'windows');
+    assert.strictEqual(profile!.versions.length, 1);
+    assert.ok(profile!.latestVersionId);
+
+    const fullClient = getClient(client.id);
+    assert.strictEqual(fullClient!.profiles.length, 1);
+    assert.strictEqual(fullClient!.profiles[0].profileId, profile!.profileId);
+  });
+
+  it('adds a new version to a profile', async () => {
+    const { initClientStore, createClient, createProfile, addProfileVersion, getClient } = await import('../clientStore');
+    initClientStore();
+
+    const client = createClient('NextCoreTI');
+    const profile = createProfile(client.id, 'Admin', 'rd01.suporte.net.br', 'windows', sampleConfig);
+    const firstVersionId = profile!.latestVersionId;
 
     const modifiedConfig = { ...sampleConfig, permanentPassword: 'newpass' };
-    const updated = addClientVersion(client.id, modifiedConfig);
+    const updated = addProfileVersion(client.id, profile!.profileId, modifiedConfig);
 
-    assert.ok(updated, 'updated client should exist');
+    assert.ok(updated, 'updated profile should exist');
     assert.strictEqual(updated!.versions.length, 2);
     assert.notStrictEqual(updated!.latestVersionId, firstVersionId, 'latestVersionId should change');
 
-    // Both versions still accessible
     const fullClient = getClient(client.id);
-    assert.strictEqual(fullClient!.versions.length, 2);
+    assert.strictEqual(fullClient!.profiles[0].versions.length, 2);
   });
 
-  it('decrypts a specific version correctly', async () => {
-    const { initClientStore, createClient, getClientVersion } = await import('../clientStore');
+  it('decrypts a specific profile version correctly', async () => {
+    const { initClientStore, createClient, createProfile, getProfileVersion } = await import('../clientStore');
     initClientStore();
 
-    const configWithPassword = { ...sampleConfig, permanentPassword: 'pass' };
-    const client = createClient('testclient', 'rd01.test.com', configWithPassword);
+    const client = createClient('NextCoreTI');
+    const profile = createProfile(client.id, 'Admin', 'rd01.suporte.net.br', 'windows', sampleConfig);
 
-    const decrypted = getClientVersion(client.id, client.latestVersionId);
+    const decrypted = getProfileVersion(client.id, profile!.profileId, profile!.latestVersionId);
     assert.ok(decrypted, 'decrypted config should exist');
-    assert.strictEqual(decrypted!.permanentPassword, 'pass');
+    assert.strictEqual(decrypted!.permanentPassword, 's3cret!');
     assert.strictEqual(decrypted!.configName, 'mrnery');
+  });
+
+  it('renames a profile', async () => {
+    const { initClientStore, createClient, createProfile, renameProfile } = await import('../clientStore');
+    initClientStore();
+
+    const client = createClient('NextCoreTI');
+    const profile = createProfile(client.id, 'Admin', 'rd01.suporte.net.br', 'windows', sampleConfig);
+
+    const renamed = renameProfile(client.id, profile!.profileId, 'PowerUser');
+    assert.ok(renamed);
+    assert.strictEqual(renamed!.name, 'PowerUser');
+  });
+
+  it('updates profile host', async () => {
+    const { initClientStore, createClient, createProfile, updateProfileHost } = await import('../clientStore');
+    initClientStore();
+
+    const client = createClient('NextCoreTI');
+    const profile = createProfile(client.id, 'Admin', 'rd01.suporte.net.br', 'windows', sampleConfig);
+
+    const updated = updateProfileHost(client.id, profile!.profileId, 'rd02.suporte.net.br');
+    assert.ok(updated);
+    assert.strictEqual(updated!.host, 'rd02.suporte.net.br');
+  });
+
+  it('deletes a profile', async () => {
+    const { initClientStore, createClient, createProfile, deleteProfile, getClient } = await import('../clientStore');
+    initClientStore();
+
+    const client = createClient('NextCoreTI');
+    const profile = createProfile(client.id, 'Admin', 'rd01.suporte.net.br', 'windows', sampleConfig);
+    assert.strictEqual(getClient(client.id)!.profiles.length, 1);
+
+    const deleted = deleteProfile(client.id, profile!.profileId);
+    assert.strictEqual(deleted, true);
+    assert.strictEqual(getClient(client.id)!.profiles.length, 0);
+  });
+
+  it('renames a client', async () => {
+    const { initClientStore, createClient, renameClient } = await import('../clientStore');
+    initClientStore();
+
+    const client = createClient('NextCoreTI');
+    const renamed = renameClient(client.id, 'NewName');
+    assert.ok(renamed);
+    assert.strictEqual(renamed!.name, 'NewName');
   });
 
   it('deletes a client', async () => {
     const { initClientStore, createClient, deleteClient, listClients } = await import('../clientStore');
     initClientStore();
 
-    const client = createClient('mrnery', 'rd01.suporte.net.br', sampleConfig);
+    const client = createClient('NextCoreTI');
     assert.strictEqual(listClients().length, 1);
 
     const deleted = deleteClient(client.id);
@@ -156,6 +220,15 @@ describe('clientStore', () => {
     initClientStore();
 
     const result = getClient('nonexistent');
+    assert.strictEqual(result, undefined);
+  });
+
+  it('returns undefined for non-existent profile', async () => {
+    const { initClientStore, createClient, createProfile, getProfileVersion } = await import('../clientStore');
+    initClientStore();
+
+    const client = createClient('NextCoreTI');
+    const result = getProfileVersion(client.id, 'nonexistent-profile', 'nonexistent-version');
     assert.strictEqual(result, undefined);
   });
 });

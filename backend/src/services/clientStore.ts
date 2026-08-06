@@ -6,6 +6,8 @@ import { encryptConfig, decryptConfig } from './cryptoService';
 
 const CLIENTS_DIR = path.join(__dirname, '../../data/clients');
 
+// ── Types ──────────────────────────────────────────────────────────────────────
+
 interface ClientVersion {
   versionId: string;
   createdAt: string;
@@ -15,24 +17,69 @@ interface ClientVersion {
   ciphertext: string;
 }
 
-interface ClientProfile {
-  id: string;
+interface ProfileEntry {
+  profileId: string;
   name: string;
   host: string;
+  platform: string;
   createdAt: string;
   updatedAt: string;
   latestVersionId: string;
   versions: ClientVersion[];
 }
 
+interface ClientData {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  profiles: ProfileEntry[];
+}
+
 export interface ClientListItem {
   id: string;
   name: string;
+  profileCount: number;
+  updatedAt: string;
+}
+
+export interface ProfileListItem {
+  profileId: string;
+  name: string;
   host: string;
+  platform: string;
   versionCount: number;
   latestVersionId: string;
   updatedAt: string;
 }
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+function clientFilePath(clientId: string): string {
+  return path.join(CLIENTS_DIR, `${clientId}.json`);
+}
+
+function writeClientFile(clientId: string, data: ClientData): void {
+  const filePath = clientFilePath(clientId);
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+  fs.chmodSync(filePath, 0o600);
+}
+
+function readClientFile(clientId: string): ClientData | undefined {
+  const filePath = clientFilePath(clientId);
+  if (!fs.existsSync(filePath)) {
+    return undefined;
+  }
+  try {
+    const data = fs.readFileSync(filePath, 'utf-8');
+    return JSON.parse(data) as ClientData;
+  } catch (error) {
+    logger.error(`Failed to read client file ${clientId}:`, error);
+    return undefined;
+  }
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────────
 
 export function initClientStore(): void {
   if (!fs.existsSync(CLIENTS_DIR)) {
@@ -41,25 +88,7 @@ export function initClientStore(): void {
   }
 }
 
-function writeClientFile(clientId: string, data: ClientProfile): void {
-  const filePath = path.join(CLIENTS_DIR, `${clientId}.json`);
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-  fs.chmodSync(filePath, 0o600);
-}
-
-function readClientFile(clientId: string): ClientProfile | undefined {
-  const filePath = path.join(CLIENTS_DIR, `${clientId}.json`);
-  if (!fs.existsSync(filePath)) {
-    return undefined;
-  }
-  try {
-    const data = fs.readFileSync(filePath, 'utf-8');
-    return JSON.parse(data) as ClientProfile;
-  } catch (error) {
-    logger.error(`Failed to read client file ${clientId}:`, error);
-    return undefined;
-  }
-}
+// ── Client-level functions ─────────────────────────────────────────────────────
 
 export function listClients(): ClientListItem[] {
   initClientStore();
@@ -70,21 +99,18 @@ export function listClients(): ClientListItem[] {
   for (const file of files) {
     try {
       const data = fs.readFileSync(path.join(CLIENTS_DIR, file), 'utf-8');
-      const profile = JSON.parse(data) as ClientProfile;
+      const client = JSON.parse(data) as ClientData;
       clients.push({
-        id: profile.id,
-        name: profile.name,
-        host: profile.host,
-        versionCount: profile.versions.length,
-        latestVersionId: profile.latestVersionId,
-        updatedAt: profile.updatedAt,
+        id: client.id,
+        name: client.name,
+        profileCount: client.profiles.length,
+        updatedAt: client.updatedAt,
       });
     } catch (error) {
       logger.error(`Failed to read client file ${file}:`, error);
     }
   }
 
-  // Sort by updatedAt descending
   clients.sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   );
@@ -92,49 +118,82 @@ export function listClients(): ClientListItem[] {
   return clients;
 }
 
-export function getClient(id: string): ClientProfile | undefined {
+export function getClient(id: string): ClientData | undefined {
   return readClientFile(id);
 }
 
-export function getClientVersion(
-  clientId: string,
-  versionId: string
-): Record<string, unknown> | undefined {
-  const client = readClientFile(clientId);
-  if (!client) {
-    return undefined;
-  }
-
-  const version = client.versions.find((v) => v.versionId === versionId);
-  if (!version) {
-    return undefined;
-  }
-
-  try {
-    return decryptConfig(version.iv, version.authTag, version.ciphertext);
-  } catch (error) {
-    logger.error(`Failed to decrypt version ${versionId} for client ${clientId}:`, error);
-    return undefined;
-  }
-}
-
-export function createClient(
-  name: string,
-  host: string,
-  config: Record<string, unknown>
-): ClientProfile {
+export function createClient(name: string): ClientData {
   initClientStore();
 
   const id = uuidv4();
+  const now = new Date().toISOString();
+
+  const client: ClientData = {
+    id,
+    name,
+    createdAt: now,
+    updatedAt: now,
+    profiles: [],
+  };
+
+  writeClientFile(id, client);
+  logger.info(`Created client ${id} (${name})`);
+
+  return client;
+}
+
+export function renameClient(id: string, name: string): ClientData | undefined {
+  const client = readClientFile(id);
+  if (!client) {
+    logger.warn(`Client ${id} not found for rename`);
+    return undefined;
+  }
+
+  client.name = name;
+  client.updatedAt = new Date().toISOString();
+  writeClientFile(client.id, client);
+  logger.info(`Renamed client ${id} to "${name}"`);
+  return client;
+}
+
+export function deleteClient(id: string): boolean {
+  const filePath = clientFilePath(id);
+  if (!fs.existsSync(filePath)) {
+    logger.warn(`Client ${id} not found for deletion`);
+    return false;
+  }
+
+  fs.unlinkSync(filePath);
+  logger.info(`Deleted client ${id}`);
+  return true;
+}
+
+// ── Profile-level functions ────────────────────────────────────────────────────
+
+export function createProfile(
+  clientId: string,
+  profileName: string,
+  host: string,
+  platform: string,
+  config: Record<string, unknown>
+): ProfileEntry | undefined {
+  const client = readClientFile(clientId);
+  if (!client) {
+    logger.warn(`Client ${clientId} not found for createProfile`);
+    return undefined;
+  }
+
+  const profileId = uuidv4();
   const versionId = uuidv4();
   const now = new Date().toISOString();
 
   const encrypted = encryptConfig(config);
 
-  const client: ClientProfile = {
-    id,
-    name,
+  const profile: ProfileEntry = {
+    profileId,
+    name: profileName,
     host,
+    platform,
     createdAt: now,
     updatedAt: now,
     latestVersionId: versionId,
@@ -150,19 +209,28 @@ export function createClient(
     ],
   };
 
-  writeClientFile(id, client);
-  logger.info(`Created client ${id} (${name})`);
+  client.profiles.push(profile);
+  client.updatedAt = now;
+  writeClientFile(clientId, client);
+  logger.info(`Created profile ${profileId} (${profileName}) for client ${clientId}`);
 
-  return client;
+  return profile;
 }
 
-export function addClientVersion(
-  id: string,
+export function addProfileVersion(
+  clientId: string,
+  profileId: string,
   config: Record<string, unknown>
-): ClientProfile | undefined {
-  const client = readClientFile(id);
+): ProfileEntry | undefined {
+  const client = readClientFile(clientId);
   if (!client) {
-    logger.warn(`Client ${id} not found for addClientVersion`);
+    logger.warn(`Client ${clientId} not found for addProfileVersion`);
+    return undefined;
+  }
+
+  const profile = client.profiles.find((p) => p.profileId === profileId);
+  if (!profile) {
+    logger.warn(`Profile ${profileId} not found in client ${clientId}`);
     return undefined;
   }
 
@@ -171,55 +239,121 @@ export function addClientVersion(
 
   const encrypted = encryptConfig(config);
 
-  const newVersion: ClientVersion = {
+  profile.versions.push({
     versionId,
     createdAt: now,
     label: '',
     iv: encrypted.iv,
     authTag: encrypted.authTag,
     ciphertext: encrypted.ciphertext,
-  };
-
-  client.versions.push(newVersion);
-  client.latestVersionId = versionId;
+  });
+  profile.latestVersionId = versionId;
+  profile.updatedAt = now;
   client.updatedAt = now;
 
-  // Update name/host if provided in config
-  if (typeof config.configName === 'string' && config.configName) {
-    client.name = config.configName;
-  }
-  if (typeof config.host === 'string' && config.host) {
-    client.host = config.host;
-  }
+  writeClientFile(clientId, client);
+  logger.info(`Added version ${versionId} to profile ${profileId} in client ${clientId}`);
 
-  writeClientFile(id, client);
-  logger.info(`Added version ${versionId} to client ${id}`);
-
-  return client;
+  return profile;
 }
 
-export function deleteClient(id: string): boolean {
-  const filePath = path.join(CLIENTS_DIR, `${id}.json`);
-  if (!fs.existsSync(filePath)) {
-    logger.warn(`Client ${id} not found for deletion`);
-    return false;
-  }
-
-  fs.unlinkSync(filePath);
-  logger.info(`Deleted client ${id}`);
-  return true;
-}
-
-export function renameClient(id: string, name: string): ClientProfile | undefined {
-  const client = readClientFile(id);
+export function getProfileVersion(
+  clientId: string,
+  profileId: string,
+  versionId: string
+): Record<string, unknown> | undefined {
+  const client = readClientFile(clientId);
   if (!client) {
-    logger.warn(`Client ${id} not found for rename`);
     return undefined;
   }
 
-  client.name = name;
+  const profile = client.profiles.find((p) => p.profileId === profileId);
+  if (!profile) {
+    return undefined;
+  }
+
+  const version = profile.versions.find((v) => v.versionId === versionId);
+  if (!version) {
+    return undefined;
+  }
+
+  try {
+    return decryptConfig(version.iv, version.authTag, version.ciphertext);
+  } catch (error) {
+    logger.error(`Failed to decrypt version ${versionId} in profile ${profileId}:`, error);
+    return undefined;
+  }
+}
+
+export function renameProfile(
+  clientId: string,
+  profileId: string,
+  name: string
+): ProfileEntry | undefined {
+  const client = readClientFile(clientId);
+  if (!client) {
+    logger.warn(`Client ${clientId} not found for renameProfile`);
+    return undefined;
+  }
+
+  const profile = client.profiles.find((p) => p.profileId === profileId);
+  if (!profile) {
+    logger.warn(`Profile ${profileId} not found in client ${clientId}`);
+    return undefined;
+  }
+
+  profile.name = name;
+  profile.updatedAt = new Date().toISOString();
+  client.updatedAt = profile.updatedAt;
+  writeClientFile(clientId, client);
+  logger.info(`Renamed profile ${profileId} to "${name}" in client ${clientId}`);
+
+  return profile;
+}
+
+export function deleteProfile(clientId: string, profileId: string): boolean {
+  const client = readClientFile(clientId);
+  if (!client) {
+    logger.warn(`Client ${clientId} not found for deleteProfile`);
+    return false;
+  }
+
+  const index = client.profiles.findIndex((p) => p.profileId === profileId);
+  if (index === -1) {
+    logger.warn(`Profile ${profileId} not found in client ${clientId}`);
+    return false;
+  }
+
+  client.profiles.splice(index, 1);
   client.updatedAt = new Date().toISOString();
-  writeClientFile(client.id, client);
-  logger.info(`Renamed client ${id} to "${name}"`);
-  return client;
+  writeClientFile(clientId, client);
+  logger.info(`Deleted profile ${profileId} from client ${clientId}`);
+
+  return true;
+}
+
+export function updateProfileHost(
+  clientId: string,
+  profileId: string,
+  host: string
+): ProfileEntry | undefined {
+  const client = readClientFile(clientId);
+  if (!client) {
+    logger.warn(`Client ${clientId} not found for updateProfileHost`);
+    return undefined;
+  }
+
+  const profile = client.profiles.find((p) => p.profileId === profileId);
+  if (!profile) {
+    logger.warn(`Profile ${profileId} not found in client ${clientId}`);
+    return undefined;
+  }
+
+  profile.host = host;
+  profile.updatedAt = new Date().toISOString();
+  client.updatedAt = profile.updatedAt;
+  writeClientFile(clientId, client);
+  logger.info(`Updated host for profile ${profileId} in client ${clientId}`);
+
+  return profile;
 }
