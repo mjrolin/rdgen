@@ -169,7 +169,6 @@ export function buildWorkflowInputs(
   // Build icon/logo/privacy links if provided
   let iconlink = 'false';
   let logolink = 'false';
-  let privacylink = 'false';
 
   if (config.iconBase64) {
     iconlink = JSON.stringify({
@@ -188,11 +187,6 @@ export function buildWorkflowInputs(
   }
 
   if (config.privacyBase64) {
-    privacylink = JSON.stringify({
-      url: genUrl + '/api',
-      uuid,
-      file: 'privacy.png',
-    });
   }
 
   return {
@@ -203,7 +197,6 @@ export function buildWorkflowInputs(
     uuid,
     iconlink,
     logolink,
-    privacylink,
     appname: config.appName || 'rustdesk',
     filename: config.filename || config.configName || 'rustdesk',
     extras: JSON.stringify(extras),
