@@ -144,6 +144,7 @@ export interface GitHubWorkflowInputs {
   uuid: string;
   iconlink: string;
   logolink: string;
+  privacylink: string;
   appname: string;
   filename: string;
   extras: string;
