@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { ClientListItem } from '@/types';
-import { listClients, deleteClient, renameClient } from '@/lib/api';
+import { listClients, deleteClient, renameClient, createClient } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { LogoutButton } from '@/components/AuthGuard';
+import { DEFAULT_BUILD_CONFIG } from '@/types';
 
 export default function ClientesPage() {
   const [clients, setClients] = useState<ClientListItem[]>([]);
@@ -13,6 +14,10 @@ export default function ClientesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+  const [showNewModal, setShowNewModal] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newHost, setNewHost] = useState('');
+  const [creating, setCreating] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -61,6 +66,35 @@ export default function ClientesPage() {
     }
   };
 
+  const handleCreateClient = async () => {
+    if (!newName.trim()) {
+      toast.error('Nome e obrigatorio');
+      return;
+    }
+    if (!newHost.trim()) {
+      toast.error('Host e obrigatorio');
+      return;
+    }
+
+    setCreating(true);
+    const result = await createClient(
+      newName.trim(),
+      newHost.trim(),
+      { ...DEFAULT_BUILD_CONFIG, configName: newName.trim(), host: newHost.trim() }
+    );
+
+    if (result.success && result.data) {
+      toast.success(`Cliente "${newName.trim()}" criado!`);
+      setShowNewModal(false);
+      setNewName('');
+      setNewHost('');
+      await loadClients();
+    } else {
+      toast.error(result.error || 'Erro ao criar cliente');
+    }
+    setCreating(false);
+  };
+
   return (
     <main className="min-h-screen p-4 md:p-8">
       <div className="max-w-5xl mx-auto">
@@ -76,7 +110,13 @@ export default function ClientesPage() {
               Gerenciar Clientes
             </h1>
           </div>
-          <LogoutButton />
+          <div className="flex items-center gap-3">
+            <button onClick={() => setShowNewModal(true)} className="btn-primary">
+              <i className="fas fa-plus mr-2"></i>
+              Novo Cliente
+            </button>
+            <LogoutButton />
+          </div>
         </div>
 
         {/* Search */}
@@ -146,7 +186,13 @@ export default function ClientesPage() {
                             </button>
                           </div>
                         ) : (
-                          <span className="text-white font-medium">{client.name}</span>
+                          <button
+                            onClick={() => router.push(`/?clientId=${client.id}`)}
+                            className="text-white font-medium hover:text-blue-400 text-left"
+                            title="Abrir no configurador"
+                          >
+                            {client.name}
+                          </button>
                         )}
                       </td>
                       <td className="py-2 px-3 text-gray-400">{client.host}</td>
@@ -157,6 +203,13 @@ export default function ClientesPage() {
                       </td>
                       <td className="py-2 px-3 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => router.push(`/?clientId=${client.id}`)}
+                            className="text-green-400 hover:text-green-300 text-xs"
+                            title="Configurar"
+                          >
+                            <i className="fas fa-cog"></i>
+                          </button>
                           <button
                             onClick={() => {
                               setEditingId(client.id);
@@ -183,6 +236,61 @@ export default function ClientesPage() {
             </div>
           )}
         </div>
+
+        {/* New Client Modal */}
+        {showNewModal && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+            <div className="section w-full max-w-md mx-4">
+              <h2 className="section-title mb-4">
+                <i className="fas fa-user-plus text-sm"></i>
+                Novo Cliente
+              </h2>
+
+              <label className="input-label">Nome do cliente</label>
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Ex: Empresa_ABC"
+                className="input-field mb-3"
+                autoFocus
+              />
+
+              <label className="input-label">Host (servidor RustDesk)</label>
+              <input
+                type="text"
+                value={newHost}
+                onChange={(e) => setNewHost(e.target.value)}
+                placeholder="Ex: rd01.suporte.net.br"
+                className="input-field mb-4"
+              />
+
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => {
+                    setShowNewModal(false);
+                    setNewName('');
+                    setNewHost('');
+                  }}
+                  className="btn-secondary"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleCreateClient}
+                  disabled={creating}
+                  className="btn-primary"
+                >
+                  {creating ? (
+                    <><i className="fas fa-spinner fa-spin mr-2"></i>Criando...</>
+                  ) : (
+                    <><i className="fas fa-plus mr-2"></i>Criar Cliente</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );

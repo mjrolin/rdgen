@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
 import toast from 'react-hot-toast';
 import { BuildConfig, DEFAULT_BUILD_CONFIG, BuildJob, ConfigTemplate, TemplateType } from '@/types';
@@ -26,6 +27,15 @@ export default function Home() {
   const [currentJob, setCurrentJob] = useState<BuildJob | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateType | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+
+  // Auto-select client from URL parameter (e.g. /?clientId=xxx from /clientes page)
+  useEffect(() => {
+    const clientIdFromUrl = searchParams.get('clientId');
+    if (clientIdFromUrl) {
+      setSelectedClientId(clientIdFromUrl);
+    }
+  }, [searchParams]);
   const [clientList, setClientList] = useState<{id: string; name: string}[]>([]);
 
   const updateConfig = (updates: Partial<BuildConfig>) => {
