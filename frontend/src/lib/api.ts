@@ -220,3 +220,15 @@ export async function deleteClient(clientId: string): Promise<ApiResponse<void>>
     };
   }
 }
+
+export async function renameClient(clientId: string, name: string): Promise<ApiResponse<ClientProfile>> {
+  try {
+    const response = await api.patch<ApiResponse<ClientProfile>>(`/clients/${clientId}`, { name });
+    return response.data;
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.error || error.message || 'Failed to rename client',
+    };
+  }
+}
