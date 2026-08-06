@@ -13,3 +13,11 @@ gcp-sa-key.json
 *.pem
 *.key
 backend/builds/
+
+# Deployment-specific files
+nginx.conf
+patches/
+workflows/
+*.service
+*.ps1
+*.zip
