@@ -286,6 +286,8 @@ jobs:
           sed -i -e 's|https://rustdesk.com/download|${{ fromJson(inputs.extras).downloadLink }}|' ./flutter/lib/desktop/pages/desktop_home_page.dart
           sed -i -e 's|https://rustdesk.com/download|${{ fromJson(inputs.extras).downloadLink }}|' ./flutter/lib/mobile/pages/connection_page.dart
           sed -i -e 's|https://rustdesk.com/download|${{ fromJson(inputs.extras).downloadLink }}|' ./src/ui/index.tis
+          sed -i -e 's|&download_url|"${{ fromJson(inputs.extras).downloadLink }}"|' ./src/updater.rs
+          sed -i -e 's|$downloadUrl/$downloadFile|${{ fromJson(inputs.extras).downloadLink }}|' ./flutter/lib/desktop/widgets/update_progress.dart
 
       - name: set server, key, and apiserver
         continue-on-error: true
@@ -441,12 +443,6 @@ jobs:
         run: |
           sed -i -e 's|!key.is_empty()|false|' ./src/client.rs
 
-      - name: add cycle monitors to toolbar
-        continue-on-error: true
-        if: fromJson(inputs.extras).cycleMonitor == 'true'
-        run: |
-          Invoke-WebRequest -Uri https://raw.githubusercontent.com/nextcoreti/rdgen/refs/heads/master/.github/patches/cycle_monitor.diff -OutFile cycle_monitor.diff
-          git apply cycle_monitor.diff
 
       - name: use X for offline display instead of orange circle
         continue-on-error: true
