@@ -209,3 +209,17 @@ export function deleteClient(id: string): boolean {
   logger.info(`Deleted client ${id}`);
   return true;
 }
+
+export function renameClient(id: string, name: string): ClientProfile | undefined {
+  const client = readClientFile(id);
+  if (!client) {
+    logger.warn(`Client ${id} not found for rename`);
+    return undefined;
+  }
+
+  client.name = name;
+  client.updatedAt = new Date().toISOString();
+  writeClientFile(client.id, client);
+  logger.info(`Renamed client ${id} to "${name}"`);
+  return client;
+}

@@ -6,6 +6,7 @@ import {
   createClient,
   addClientVersion,
   deleteClient,
+  renameClient,
 } from '../services/clientStore';
 import { requireAdmin } from '../middleware/apiKeyAuth';
 import logger from '../utils/logger';
@@ -79,6 +80,24 @@ router.put('/:id', (req: Request, res: Response) => {
     res.json({ success: true, data: client });
   } catch (error: any) {
     logger.error('Error updating client:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+router.patch('/:id', (req: Request, res: Response) => {
+  try {
+    const { name } = req.body;
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ success: false, error: 'name is required' });
+    }
+    const client = renameClient(req.params.id, name.trim());
+    if (!client) {
+      return res.status(404).json({ success: false, error: 'Client not found' });
+    }
+    res.json({ success: true, data: client });
+  } catch (error: any) {
+    logger.error('Error renaming client:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
