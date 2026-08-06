@@ -23,3 +23,5 @@ workflows/
 *.zip
 # Docs (local only)
 docs/
+API_ACCESS.md
+INTEGRATION_EXAMPLES.md
