@@ -90,10 +90,10 @@ router.delete('/:id', (req: Request, res: Response) => {
 router.post('/:id/profiles', (req: Request, res: Response) => {
   try {
     const { profileName, host, platform, config } = req.body;
-    if (!profileName || !host || !platform || !config) {
+    if (!profileName || !platform || !config) {
       return res.status(400).json({
         success: false,
-        error: 'profileName, host, platform, and config are required',
+        error: 'profileName, platform, and config are required',
       });
     }
     const profile = createProfile(req.params.id, profileName, host, platform, config);
