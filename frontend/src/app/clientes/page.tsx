@@ -71,11 +71,6 @@ export default function ClientesPage() {
       toast.error('Nome e obrigatorio');
       return;
     }
-    if (!newHost.trim()) {
-      toast.error('Host e obrigatorio');
-      return;
-    }
-
     setCreating(true);
     const result = await createClient(
       newName.trim(),
@@ -256,7 +251,7 @@ export default function ClientesPage() {
                 autoFocus
               />
 
-              <label className="input-label">Host (servidor RustDesk)</label>
+              <label className="input-label">Host (servidor RustDesk) <span className="text-gray-600">(opcional)</span></label>
               <input
                 type="text"
                 value={newHost}
