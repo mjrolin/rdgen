@@ -53,10 +53,10 @@ router.get('/:id/versions/:versionId', (req: Request, res: Response) => {
 router.post('/', (req: Request, res: Response) => {
   try {
     const { name, host, config } = req.body;
-    if (!name || !host || !config) {
+    if (!name || !config) {
       return res.status(400).json({
         success: false,
-        error: 'name, host and config are required',
+        error: "name and config are required",
       });
     }
     const client = createClient(name, host, config);
