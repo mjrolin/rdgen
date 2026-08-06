@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
 import toast from 'react-hot-toast';
 import { BuildConfig, DEFAULT_BUILD_CONFIG, BuildJob, ConfigTemplate, TemplateType } from '@/types';
-import { startBuild, createClient, addClientVersion } from '@/lib/api';
+import { startBuild, createClient, createProfile, addProfileVersion } from '@/lib/api';
 import PlatformSelector from '@/components/PlatformSelector';
 import TemplateSelector from '@/components/TemplateSelector';
 import GeneralSection from '@/components/GeneralSection';
@@ -27,13 +27,18 @@ export default function Home() {
   const [currentJob, setCurrentJob] = useState<BuildJob | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateType | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const searchParams = useSearchParams();
 
-  // Auto-select client from URL parameter (e.g. /?clientId=xxx from /clientes page)
+  // Auto-select client/profile from URL parameter (e.g. /?clientId=xxx&profileId=yyy from /clientes page)
   useEffect(() => {
     const clientIdFromUrl = searchParams.get('clientId');
+    const profileIdFromUrl = searchParams.get('profileId');
     if (clientIdFromUrl) {
       setSelectedClientId(clientIdFromUrl);
+      if (profileIdFromUrl) {
+        setSelectedProfileId(profileIdFromUrl);
+      }
     }
   }, [searchParams]);
   const [clientList, setClientList] = useState<{id: string; name: string}[]>([]);
@@ -90,16 +95,10 @@ export default function Home() {
     // Auto-save client profile (fire-and-forget alongside build)
     const saveProfile = async () => {
       try {
-        if (selectedClientId) {
-          const result = await addClientVersion(selectedClientId, buildConfig);
+        if (selectedClientId && selectedProfileId) {
+          const result = await addProfileVersion(selectedClientId, selectedProfileId, buildConfig);
           if (result.success) {
-            toast.success('Perfil do cliente atualizado', { id: 'profile-save' });
-          }
-        } else if (config.configName) {
-          const result = await createClient(config.configName, config.host, buildConfig);
-          if (result.success && result.data) {
-            setSelectedClientId(result.data.id);
-            toast.success('Perfil de cliente criado', { id: 'profile-save' });
+            toast.success('Perfil atualizado', { id: 'profile-save' });
           }
         }
       } catch {
@@ -138,76 +137,32 @@ export default function Home() {
     }
 
     try {
-      // Find existing client with same name
-      const existingClient = clientList.find(
-        (c) => c.name === config.configName && c.id !== selectedClientId
-      );
-
-      if (selectedClientId) {
-        // A client is selected in the dropdown
-        const selectedClient = clientList.find((c) => c.id === selectedClientId);
-
-        if (selectedClient && selectedClient.name !== config.configName) {
-          // Name changed — ask user what to do
-          const choice = window.confirm(
-            `O nome mudou de "${selectedClient.name}" para "${config.configName}".\n\n` +
-            `OK = Criar novo cliente "${config.configName}"\n` +
-            `Cancelar = Atualizar "${selectedClient.name}" com nova versão`
-          );
-
-          if (choice) {
-            const result = await createClient(config.configName, config.host, config);
-            if (result.success && result.data) {
-              setSelectedClientId(result.data.id);
-              toast.success(`Novo perfil "${config.configName}" criado!`);
-            } else {
-              toast.error(result.error || 'Erro ao criar perfil');
-            }
-            return;
-          }
-        }
-
-        // Update existing selected client
-        const result = await addClientVersion(selectedClientId, config);
+      if (selectedClientId && selectedProfileId) {
+        // Update existing profile with new version
+        const result = await addProfileVersion(selectedClientId, selectedProfileId, config);
         if (result.success) {
-          toast.success('Perfil do cliente atualizado!');
+          toast.success('Perfil atualizado!');
         } else {
           toast.error(result.error || 'Erro ao atualizar perfil');
         }
-      } else if (existingClient) {
-        // No client selected but name matches an existing one
-        const choice = window.confirm(
-          `Já existe um cliente chamado "${config.configName}".\n\n` +
-          `OK = Atualizar "${config.configName}" com nova versão\n` +
-          `Cancelar = Criar novo cliente com mesmo nome`
+      } else if (selectedClientId) {
+        // Client selected but no profile — create new profile
+        const result = await createProfile(
+          selectedClientId,
+          config.configName,
+          config.host || '',
+          config.platform,
+          config
         );
-
-        if (choice) {
-          const result = await addClientVersion(existingClient.id, config);
-          if (result.success) {
-            setSelectedClientId(existingClient.id);
-            toast.success('Perfil do cliente atualizado!');
-          } else {
-            toast.error(result.error || 'Erro ao atualizar perfil');
-          }
-        } else {
-          const result = await createClient(config.configName, config.host, config);
-          if (result.success && result.data) {
-            setSelectedClientId(result.data.id);
-            toast.success(`Perfil "${config.configName}" criado!`);
-          } else {
-            toast.error(result.error || 'Erro ao criar perfil');
-          }
-        }
-      } else {
-        // No client selected, no name conflict — create new
-        const result = await createClient(config.configName, config.host, config);
         if (result.success && result.data) {
-          setSelectedClientId(result.data.id);
+          setSelectedProfileId(result.data.profileId);
           toast.success(`Perfil "${config.configName}" criado!`);
         } else {
           toast.error(result.error || 'Erro ao criar perfil');
         }
+      } else {
+        // No client selected — need to create client first via /clientes page
+        toast.error('Selecione um cliente primeiro ou crie um na pagina Gerenciar Clientes');
       }
     } catch {
       toast.error('Erro ao salvar perfil');
@@ -235,7 +190,9 @@ export default function Home() {
         currentConfig={config}
         onConfigLoad={setConfig}
         selectedClientId={selectedClientId}
+        selectedProfileId={selectedProfileId}
         onSelectClient={setSelectedClientId}
+        onSelectProfile={setSelectedProfileId}
         onClientListChange={setClientList}
       />
 

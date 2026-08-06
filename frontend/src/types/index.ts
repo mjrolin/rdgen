@@ -417,7 +417,15 @@ export const CONFIG_TEMPLATES: ConfigTemplate[] = [
 export interface ClientListItem {
   id: string;
   name: string;
+  profileCount: number;
+  updatedAt: string;
+}
+
+export interface ProfileListItem {
+  profileId: string;
+  name: string;
   host: string;
+  platform: string;
   versionCount: number;
   latestVersionId: string;
   updatedAt: string;
@@ -429,12 +437,21 @@ export interface ClientVersionInfo {
   label: string;
 }
 
-export interface ClientProfile {
-  id: string;
+export interface ProfileDetail {
+  profileId: string;
   name: string;
   host: string;
+  platform: string;
   createdAt: string;
   updatedAt: string;
   latestVersionId: string;
   versions: ClientVersionInfo[];
+}
+
+export interface ClientDetail {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  profiles: ProfileDetail[];
 }

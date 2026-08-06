@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { BuildConfig, BuildJob, ApiResponse, ClientListItem, ClientProfile } from '@/types';
+import type { BuildConfig, BuildJob, ApiResponse, ClientListItem, ClientDetail, ProfileDetail, ClientListItem as CLItem } from '@/types';
 
 const api = axios.create({
   baseURL: '/api',
@@ -128,7 +128,7 @@ export async function healthCheck(): Promise<ApiResponse<{ status: string }>> {
 }
 
 // =====================
-// Client Profile API
+// Client & Profile API
 // =====================
 
 export async function listClients(): Promise<ApiResponse<ClientListItem[]>> {
@@ -136,76 +136,34 @@ export async function listClients(): Promise<ApiResponse<ClientListItem[]>> {
     const response = await api.get<ApiResponse<ClientListItem[]>>('/clients');
     return response.data;
   } catch (error: any) {
-    return {
-      success: false,
-      error: error.response?.data?.error || error.message || 'Failed to list clients',
-    };
+    return { success: false, error: error.response?.data?.error || error.message };
   }
 }
 
-export async function getClient(clientId: string): Promise<ApiResponse<ClientProfile>> {
+export async function getClient(clientId: string): Promise<ApiResponse<ClientDetail>> {
   try {
-    const response = await api.get<ApiResponse<ClientProfile>>(`/clients/${clientId}`);
+    const response = await api.get<ApiResponse<ClientDetail>>(`/clients/${clientId}`);
     return response.data;
   } catch (error: any) {
-    return {
-      success: false,
-      error: error.response?.data?.error || error.message || 'Failed to get client',
-    };
+    return { success: false, error: error.response?.data?.error || error.message };
   }
 }
 
-export async function getClientVersion(
-  clientId: string,
-  versionId: string
-): Promise<ApiResponse<BuildConfig>> {
+export async function createClient(name: string): Promise<ApiResponse<ClientDetail>> {
   try {
-    const response = await api.get<ApiResponse<BuildConfig>>(
-      `/clients/${clientId}/versions/${versionId}`
-    );
+    const response = await api.post<ApiResponse<ClientDetail>>('/clients', { name });
     return response.data;
   } catch (error: any) {
-    return {
-      success: false,
-      error: error.response?.data?.error || error.message || 'Failed to get client version',
-    };
+    return { success: false, error: error.response?.data?.error || error.message };
   }
 }
 
-export async function createClient(
-  name: string,
-  host: string,
-  config: BuildConfig
-): Promise<ApiResponse<ClientProfile>> {
+export async function renameClient(clientId: string, name: string): Promise<ApiResponse<ClientDetail>> {
   try {
-    const response = await api.post<ApiResponse<ClientProfile>>('/clients', {
-      name,
-      host,
-      config,
-    });
+    const response = await api.patch<ApiResponse<ClientDetail>>(`/clients/${clientId}`, { name });
     return response.data;
   } catch (error: any) {
-    return {
-      success: false,
-      error: error.response?.data?.error || error.message || 'Failed to create client',
-    };
-  }
-}
-
-export async function addClientVersion(
-  clientId: string,
-  config: BuildConfig
-): Promise<ApiResponse<ClientProfile>> {
-  try {
-    const response = await api.put<ApiResponse<ClientProfile>>(`/clients/${clientId}`, {
-      config,
-    });
-    return response.data;
-  } catch (error: any) {
-    return {
-      success: false,
-      error: error.response?.data?.error || error.message || 'Failed to add client version',
-    };
+    return { success: false, error: error.response?.data?.error || error.message };
   }
 }
 
@@ -214,21 +172,67 @@ export async function deleteClient(clientId: string): Promise<ApiResponse<void>>
     const response = await api.delete<ApiResponse<void>>(`/clients/${clientId}`);
     return response.data;
   } catch (error: any) {
-    return {
-      success: false,
-      error: error.response?.data?.error || error.message || 'Failed to delete client',
-    };
+    return { success: false, error: error.response?.data?.error || error.message };
   }
 }
 
-export async function renameClient(clientId: string, name: string): Promise<ApiResponse<ClientProfile>> {
+export async function createProfile(
+  clientId: string, profileName: string, host: string, platform: string, config: BuildConfig
+): Promise<ApiResponse<ProfileDetail>> {
   try {
-    const response = await api.patch<ApiResponse<ClientProfile>>(`/clients/${clientId}`, { name });
+    const response = await api.post<ApiResponse<ProfileDetail>>(`/clients/${clientId}/profiles`, {
+      profileName, host, platform, config,
+    });
     return response.data;
   } catch (error: any) {
-    return {
-      success: false,
-      error: error.response?.data?.error || error.message || 'Failed to rename client',
-    };
+    return { success: false, error: error.response?.data?.error || error.message };
+  }
+}
+
+export async function addProfileVersion(
+  clientId: string, profileId: string, config: BuildConfig
+): Promise<ApiResponse<ProfileDetail>> {
+  try {
+    const response = await api.put<ApiResponse<ProfileDetail>>(
+      `/clients/${clientId}/profiles/${profileId}`, { config }
+    );
+    return response.data;
+  } catch (error: any) {
+    return { success: false, error: error.response?.data?.error || error.message };
+  }
+}
+
+export async function getProfileVersion(
+  clientId: string, profileId: string, versionId: string
+): Promise<ApiResponse<BuildConfig>> {
+  try {
+    const response = await api.get<ApiResponse<BuildConfig>>(
+      `/clients/${clientId}/profiles/${profileId}/versions/${versionId}`
+    );
+    return response.data;
+  } catch (error: any) {
+    return { success: false, error: error.response?.data?.error || error.message };
+  }
+}
+
+export async function renameProfile(
+  clientId: string, profileId: string, name: string
+): Promise<ApiResponse<ProfileDetail>> {
+  try {
+    const response = await api.patch<ApiResponse<ProfileDetail>>(
+      `/clients/${clientId}/profiles/${profileId}`, { name }
+    );
+    return response.data;
+  } catch (error: any) {
+    return { success: false, error: error.response?.data?.error || error.message };
+  }
+}
+
+export async function deleteProfile(clientId: string, profileId: string): Promise<ApiResponse<void>> {
+  try {
+    const response = await api.delete<ApiResponse<void>>(`/clients/${clientId}/profiles/${profileId}`);
+    return response.data;
+  } catch (error: any) {
+    return { success: false, error: error.response?.data?.error || error.message };
   }
 }

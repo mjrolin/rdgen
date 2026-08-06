@@ -1,15 +1,17 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { BuildConfig, ClientListItem, ClientProfile } from '@/types';
-import { listClients, getClient, getClientVersion } from '@/lib/api';
+import { BuildConfig, ClientListItem, ClientDetail, ProfileDetail } from '@/types';
+import { listClients, getClient, getProfileVersion } from '@/lib/api';
 import toast from 'react-hot-toast';
 
 interface ClientSelectorProps {
   currentConfig: BuildConfig;
   onConfigLoad: (config: BuildConfig) => void;
   selectedClientId: string | null;
+  selectedProfileId: string | null;
   onSelectClient: (clientId: string | null) => void;
+  onSelectProfile: (profileId: string | null) => void;
   onClientListChange?: (clients: {id: string; name: string}[]) => void;
 }
 
@@ -17,19 +19,22 @@ export default function ClientSelector({
   currentConfig,
   onConfigLoad,
   selectedClientId,
+  selectedProfileId,
   onSelectClient,
+  onSelectProfile,
   onClientListChange,
 }: ClientSelectorProps) {
   const [clients, setClients] = useState<ClientListItem[]>([]);
+  const [selectedClient, setSelectedClient] = useState<ClientDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingVersion, setLoadingVersion] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<ClientProfile | null>(null);
-  const [selectedVersionId, setSelectedVersionId] = useState<string>('');
   const [showPassword, setShowPassword] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Search state for client
+  const [clientSearch, setClientSearch] = useState('');
+  const [showClientDropdown, setShowClientDropdown] = useState(false);
+  const clientDropdownRef = useRef<HTMLDivElement>(null);
+  const clientInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { loadClients(); }, []);
 
@@ -39,22 +44,20 @@ export default function ClientSelector({
         getClient(selectedClientId).then((result) => {
           if (result.success && result.data) {
             setSelectedClient(result.data);
-            setSelectedVersionId(result.data.latestVersionId);
-            setSearchTerm(result.data.name);
+            setClientSearch(result.data.name);
           }
         });
       });
     } else {
       setSelectedClient(null);
-      setSelectedVersionId('');
-      setSearchTerm('');
+      setClientSearch('');
     }
   }, [selectedClientId]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setShowDropdown(false);
+      if (clientDropdownRef.current && !clientDropdownRef.current.contains(e.target as Node)) {
+        setShowClientDropdown(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -74,37 +77,51 @@ export default function ClientSelector({
   };
 
   const filteredClients = clients.filter((c) =>
-    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.host.toLowerCase().includes(searchTerm.toLowerCase())
+    c.name.toLowerCase().includes(clientSearch.toLowerCase())
   );
 
   const handleSelectClient = async (clientId: string) => {
-    setShowDropdown(false);
+    setShowClientDropdown(false);
+    onSelectProfile(null);
     setShowPassword(false);
 
     if (clientId === 'new') {
       onSelectClient(null);
       setSelectedClient(null);
-      setSelectedVersionId('');
-      setSearchTerm('');
+      setClientSearch('');
       return;
     }
 
     onSelectClient(clientId);
     const client = clients.find(c => c.id === clientId);
-    if (client) setSearchTerm(client.name);
+    if (client) setClientSearch(client.name);
 
     const result = await getClient(clientId);
     if (result.success && result.data) {
       setSelectedClient(result.data);
-      setSelectedVersionId(result.data.latestVersionId);
-      await loadVersion(clientId, result.data.latestVersionId);
+      // Auto-select latest profile
+      if (result.data.profiles.length > 0) {
+        const latest = result.data.profiles[result.data.profiles.length - 1];
+        onSelectProfile(latest.profileId);
+        await loadVersion(clientId, latest.profileId, latest.latestVersionId);
+      }
     }
   };
 
-  const loadVersion = async (clientId: string, versionId: string) => {
+  const handleSelectProfile = async (profileId: string) => {
+    setShowPassword(false);
+    onSelectProfile(profileId);
+
+    if (!selectedClientId || !selectedClient) return;
+    const profile = selectedClient.profiles.find(p => p.profileId === profileId);
+    if (profile) {
+      await loadVersion(selectedClientId, profileId, profile.latestVersionId);
+    }
+  };
+
+  const loadVersion = async (clientId: string, profileId: string, versionId: string) => {
     setLoadingVersion(true);
-    const result = await getClientVersion(clientId, versionId);
+    const result = await getProfileVersion(clientId, profileId, versionId);
     if (result.success && result.data) {
       onConfigLoad(result.data as unknown as BuildConfig);
       toast.success('Configuracao carregada');
@@ -115,12 +132,13 @@ export default function ClientSelector({
   };
 
   const handleVersionChange = async (versionId: string) => {
-    setSelectedVersionId(versionId);
     setShowPassword(false);
-    if (selectedClientId) {
-      await loadVersion(selectedClientId, versionId);
+    if (selectedClientId && selectedProfileId) {
+      await loadVersion(selectedClientId, selectedProfileId, versionId);
     }
   };
+
+  const selectedProfile = selectedClient?.profiles.find(p => p.profileId === selectedProfileId);
 
   return (
     <div className="section mb-4">
@@ -135,24 +153,25 @@ export default function ClientSelector({
         </a>
       </div>
 
-      <div className="flex gap-3 items-end">
-        <div className="flex-1 relative" ref={dropdownRef}>
-          <label className="input-label">Perfil do cliente</label>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {/* Client selector */}
+        <div className="relative" ref={clientDropdownRef}>
+          <label className="input-label">Cliente</label>
           <div className="relative">
             <input
-              ref={inputRef}
+              ref={clientInputRef}
               type="text"
-              value={searchTerm}
+              value={clientSearch}
               onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setShowDropdown(true);
+                setClientSearch(e.target.value);
+                setShowClientDropdown(true);
                 if (!e.target.value) {
                   onSelectClient(null);
+                  onSelectProfile(null);
                   setSelectedClient(null);
-                  setSelectedVersionId('');
                 }
               }}
-              onFocus={() => setShowDropdown(true)}
+              onFocus={() => setShowClientDropdown(true)}
               placeholder={loading ? 'Carregando...' : 'Buscar cliente...'}
               className="input-field pr-8"
               disabled={loading}
@@ -162,10 +181,10 @@ export default function ClientSelector({
                 type="button"
                 onClick={() => {
                   onSelectClient(null);
+                  onSelectProfile(null);
                   setSelectedClient(null);
-                  setSelectedVersionId('');
-                  setSearchTerm('');
-                  inputRef.current?.focus();
+                  setClientSearch('');
+                  clientInputRef.current?.focus();
                 }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
               >
@@ -174,19 +193,11 @@ export default function ClientSelector({
             )}
           </div>
 
-          {showDropdown && !selectedClientId && (
-            <div className="absolute z-50 w-full mt-1 bg-[#1a1a1a] border border-[#444] rounded-lg shadow-xl max-h-60 overflow-y-auto">
-              <button
-                type="button"
-                onClick={() => handleSelectClient('new')}
-                className="w-full text-left px-3 py-2 hover:bg-[#333] text-white text-sm border-b border-[#333] flex items-center gap-2"
-              >
-                <i className="fas fa-plus text-green-400 text-xs"></i>
-                Novo Cliente
-              </button>
+          {showClientDropdown && !selectedClientId && (
+            <div className="absolute z-50 w-full mt-1 bg-[#1a1a1a] border border-[#444] rounded-lg shadow-xl max-h-48 overflow-y-auto">
               {filteredClients.length === 0 ? (
                 <div className="px-3 py-2 text-gray-500 text-sm">
-                  {searchTerm ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}
+                  {clientSearch ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}
                 </div>
               ) : (
                 filteredClients.map((client) => (
@@ -196,13 +207,8 @@ export default function ClientSelector({
                     onClick={() => handleSelectClient(client.id)}
                     className="w-full text-left px-3 py-2 hover:bg-[#333] text-white text-sm flex items-center justify-between"
                   >
-                    <div>
-                      <span className="font-medium">{client.name}</span>
-                      <span className="text-gray-500 text-xs ml-2">{client.host}</span>
-                    </div>
-                    <span className="text-gray-500 text-xs">
-                      {client.versionCount}v
-                    </span>
+                    <span className="font-medium">{client.name}</span>
+                    <span className="text-gray-500 text-xs">{client.profileCount} perfis</span>
                   </button>
                 ))
               )}
@@ -210,23 +216,41 @@ export default function ClientSelector({
           )}
         </div>
 
-        {selectedClient && (
-          <div className="flex-1">
-            <label className="input-label">Versao de referencia</label>
+        {/* Profile selector */}
+        {selectedClient && selectedClient.profiles.length > 0 && (
+          <div>
+            <label className="input-label">Perfil</label>
             <select
-              value={selectedVersionId}
+              value={selectedProfileId || ''}
+              onChange={(e) => handleSelectProfile(e.target.value)}
+              className="input-field"
+            >
+              {selectedClient.profiles.map((profile) => (
+                <option key={profile.profileId} value={profile.profileId}>
+                  {profile.name} ({profile.platform}) — {profile.versions.length}v
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Version selector */}
+        {selectedProfile && selectedProfile.versions.length > 0 && (
+          <div>
+            <label className="input-label">Versao</label>
+            <select
+              value={selectedProfile.latestVersionId}
               onChange={(e) => handleVersionChange(e.target.value)}
               className="input-field"
               disabled={loadingVersion}
             >
-              {selectedClient.versions
+              {selectedProfile.versions
                 .slice()
                 .reverse()
                 .map((v, idx) => (
                   <option key={v.versionId} value={v.versionId}>
-                    {idx === 0 ? '* ' : ''}v{selectedClient.versions.length - idx} -{' '}
+                    {idx === 0 ? '* ' : ''}v{selectedProfile.versions.length - idx} -{' '}
                     {new Date(v.createdAt).toLocaleDateString('pt-BR')}
-                    {v.label ? ` (${v.label})` : ''}
                   </option>
                 ))}
             </select>
@@ -234,7 +258,7 @@ export default function ClientSelector({
         )}
       </div>
 
-      {selectedClient && currentConfig.permanentPassword && (
+      {selectedProfile && currentConfig.permanentPassword && (
         <div className="mt-2 flex items-center gap-2">
           <span className="text-gray-400 text-xs">Senha permanente:</span>
           <span className="text-white text-xs font-mono">
