@@ -13,6 +13,7 @@ interface ClientSelectorProps {
   onSelectClient: (clientId: string | null) => void;
   onSelectProfile: (profileId: string | null) => void;
   onClientListChange?: (clients: {id: string; name: string}[]) => void;
+  onClientDataChange?: (client: ClientDetail | null) => void;
 }
 
 export default function ClientSelector({
@@ -23,6 +24,7 @@ export default function ClientSelector({
   onSelectClient,
   onSelectProfile,
   onClientListChange,
+  onClientDataChange,
 }: ClientSelectorProps) {
   const [clients, setClients] = useState<ClientListItem[]>([]);
   const [selectedClient, setSelectedClient] = useState<ClientDetail | null>(null);
@@ -45,6 +47,7 @@ export default function ClientSelector({
           if (result.success && result.data) {
             setSelectedClient(result.data);
             setClientSearch(result.data.name);
+            if (onClientDataChange) onClientDataChange(result.data);
           }
         });
       });
@@ -99,6 +102,7 @@ export default function ClientSelector({
     const result = await getClient(clientId);
     if (result.success && result.data) {
       setSelectedClient(result.data);
+      if (onClientDataChange) onClientDataChange(result.data);
       // Auto-select latest profile
       if (result.data.profiles.length > 0) {
         const latest = result.data.profiles[result.data.profiles.length - 1];

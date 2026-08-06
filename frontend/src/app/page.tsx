@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
 import toast from 'react-hot-toast';
-import { BuildConfig, DEFAULT_BUILD_CONFIG, BuildJob, ConfigTemplate, TemplateType } from '@/types';
+import { BuildConfig, DEFAULT_BUILD_CONFIG, BuildJob, ConfigTemplate, TemplateType, ClientDetail } from '@/types';
 import { startBuild, createClient, createProfile, addProfileVersion } from '@/lib/api';
 import PlatformSelector from '@/components/PlatformSelector';
 import TemplateSelector from '@/components/TemplateSelector';
@@ -28,6 +28,7 @@ export default function Home() {
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateType | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+  const [selectedClient, setSelectedClient] = useState<ClientDetail | null>(null);
   const searchParams = useSearchParams();
 
   // Auto-select client/profile from URL parameter (e.g. /?clientId=xxx&profileId=yyy from /clientes page)
@@ -132,21 +133,47 @@ export default function Home() {
 
   const handleSaveProfile = async () => {
     if (!config.configName) {
-      toast.error('Preencha o nome da configuração antes de salvar');
+      toast.error('Preencha o nome da configuracao antes de salvar');
       return;
     }
 
     try {
-      if (selectedClientId && selectedProfileId) {
-        // Update existing profile with new version
-        const result = await addProfileVersion(selectedClientId, selectedProfileId, config);
-        if (result.success) {
-          toast.success('Perfil atualizado!');
+      if (!selectedClientId) {
+        toast.error('Selecione um cliente primeiro ou crie um na pagina Gerenciar Clientes');
+        return;
+      }
+
+      // Check if configName matches the selected profile name
+      if (selectedProfileId && selectedClient?.profiles) {
+        const currentProfile = selectedClient.profiles.find(p => p.profileId === selectedProfileId);
+        const nameMatches = currentProfile && config.configName === currentProfile.name;
+
+        if (nameMatches) {
+          // Same profile — add version
+          const result = await addProfileVersion(selectedClientId, selectedProfileId, config);
+          if (result.success) {
+            toast.success('Perfil atualizado!');
+          } else {
+            toast.error(result.error || 'Erro ao atualizar perfil');
+          }
         } else {
-          toast.error(result.error || 'Erro ao atualizar perfil');
+          // Different name — create new profile
+          const result = await createProfile(
+            selectedClientId,
+            config.configName,
+            config.host || '',
+            config.platform,
+            config
+          );
+          if (result.success && result.data) {
+            setSelectedProfileId(result.data.profileId);
+            toast.success(`Perfil "${config.configName}" criado!`);
+          } else {
+            toast.error(result.error || 'Erro ao criar perfil');
+          }
         }
-      } else if (selectedClientId) {
-        // Client selected but no profile — create new profile
+      } else {
+        // No profile selected — create new profile
         const result = await createProfile(
           selectedClientId,
           config.configName,
@@ -160,9 +187,6 @@ export default function Home() {
         } else {
           toast.error(result.error || 'Erro ao criar perfil');
         }
-      } else {
-        // No client selected — need to create client first via /clientes page
-        toast.error('Selecione um cliente primeiro ou crie um na pagina Gerenciar Clientes');
       }
     } catch {
       toast.error('Erro ao salvar perfil');
@@ -194,6 +218,7 @@ export default function Home() {
         onSelectClient={setSelectedClientId}
         onSelectProfile={setSelectedProfileId}
         onClientListChange={setClientList}
+        onClientDataChange={setSelectedClient}
       />
 
       <h1 className="text-2xl font-bold text-white text-center mb-6 flex items-center justify-center gap-2">
