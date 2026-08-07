@@ -20,6 +20,7 @@ import ConfigManager from '@/components/ConfigManager';
 import ClientSelector from '@/components/ClientSelector';
 import BuildProgress from '@/components/BuildProgress';
 import { LogoutButton } from '@/components/AuthGuard';
+import { canEdit, canSave, canBuild, isAdmin } from '@/lib/permissions';
 
 export default function Home() {
   const [config, setConfig] = useState<BuildConfig>(DEFAULT_BUILD_CONFIG);
@@ -191,6 +192,11 @@ export default function Home() {
         <a href="/api-docs" className="text-blue-400 hover:text-blue-300 text-sm">
           API Docs
         </a>
+        {isAdmin() && (
+          <a href="/admin/usuarios" className="text-blue-400 hover:text-blue-300 text-sm">
+            <i className="fas fa-cog mr-1"></i>Admin
+          </a>
+        )}
         <LogoutButton />
       </div>
 
@@ -275,6 +281,7 @@ export default function Home() {
           <div className="fixed bottom-0 left-0 right-0 bg-[#111] border-t border-[#333] shadow-lg z-50">
             <div className="max-w-5xl mx-auto flex items-center justify-between py-3 px-4">
               <div className="flex gap-2">
+                {canSave() && (
                 <button
                   onClick={handleSaveProfile}
                   className="btn-secondary px-4 py-2"
@@ -282,24 +289,27 @@ export default function Home() {
                   <i className="fas fa-save mr-2"></i>
                   Salvar Perfil
                 </button>
+              )}
               </div>
-              <button
-                onClick={handleGenerate}
-                disabled={isBuilding}
-                className="btn-primary px-6 py-2"
-              >
-                {isBuilding ? (
-                  <>
-                    <i className="fas fa-spinner fa-spin mr-2"></i>
-                    Starting...
-                  </>
-                ) : (
-                  <>
-                    <i className="fas fa-rocket mr-2"></i>
-                    Gerar Build
-                  </>
-                )}
-              </button>
+              {canBuild() && (
+                <button
+                  onClick={handleGenerate}
+                  disabled={isBuilding}
+                  className="btn-primary px-6 py-2"
+                >
+                  {isBuilding ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin mr-2"></i>
+                      Starting...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-rocket mr-2"></i>
+                      Gerar Build
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
 

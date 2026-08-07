@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { LogoutButton } from '@/components/AuthGuard';
 import { DEFAULT_BUILD_CONFIG } from '@/types';
+import { canEdit, isAdmin } from '@/lib/permissions';
 
 export default function ClientesPage() {
   const [clients, setClients] = useState<ClientListItem[]>([]);
@@ -158,10 +159,12 @@ export default function ClientesPage() {
             </h1>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => setShowNewClientModal(true)} className="btn-primary">
-              <i className="fas fa-plus mr-2"></i>
-              Novo Cliente
-            </button>
+            {canEdit() && (
+              <button onClick={() => setShowNewClientModal(true)} className="btn-primary">
+                <i className="fas fa-plus mr-2"></i>
+                Novo Cliente
+              </button>
+            )}
             <LogoutButton />
           </div>
         </div>
@@ -224,8 +227,12 @@ export default function ClientesPage() {
                     <span className="text-gray-500 text-xs">{client.profileCount} perfis</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => { setEditingId(client.id); setEditName(client.name); }} className="text-blue-400 hover:text-blue-300 text-xs" title="Renomear"><i className="fas fa-pen"></i></button>
-                    <button onClick={() => handleDeleteClient(client.id, client.name)} className="text-red-400 hover:text-red-300 text-xs" title="Excluir"><i className="fas fa-trash"></i></button>
+                    {canEdit() && (
+                      <>
+                        <button onClick={() => { setEditingId(client.id); setEditName(client.name); }} className="text-blue-400 hover:text-blue-300 text-xs" title="Renomear"><i className="fas fa-pen"></i></button>
+                        <button onClick={() => handleDeleteClient(client.id, client.name)} className="text-red-400 hover:text-red-300 text-xs" title="Excluir"><i className="fas fa-trash"></i></button>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -268,18 +275,24 @@ export default function ClientesPage() {
                             >
                               <i className="fas fa-cog"></i>
                             </button>
-                            <button onClick={() => { setEditingProfileId(profile.profileId); setEditProfileName(profile.name); }} className="text-blue-400 hover:text-blue-300 text-xs" title="Renomear"><i className="fas fa-pen"></i></button>
-                            <button onClick={() => handleDeleteProfile(client.id, profile.profileId, profile.name)} className="text-red-400 hover:text-red-300 text-xs" title="Excluir"><i className="fas fa-trash"></i></button>
+                            {canEdit() && (
+                              <>
+                                <button onClick={() => { setEditingProfileId(profile.profileId); setEditProfileName(profile.name); }} className="text-blue-400 hover:text-blue-300 text-xs" title="Renomear"><i className="fas fa-pen"></i></button>
+                                <button onClick={() => handleDeleteProfile(client.id, profile.profileId, profile.name)} className="text-red-400 hover:text-red-300 text-xs" title="Excluir"><i className="fas fa-trash"></i></button>
+                              </>
+                            )}
                           </div>
                         </div>
                       ))
                     )}
-                    <button
-                      onClick={() => setShowNewProfileModal(true)}
-                      className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 mt-2"
-                    >
-                      <i className="fas fa-plus text-xs"></i> Novo Perfil
-                    </button>
+                    {canEdit() && (
+                      <button
+                        onClick={() => setShowNewProfileModal(true)}
+                        className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 mt-2"
+                      >
+                        <i className="fas fa-plus text-xs"></i> Novo Perfil
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
