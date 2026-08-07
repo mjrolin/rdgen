@@ -11,6 +11,10 @@ import logger from './utils/logger';
 import clientsRoutes from './routes/clients';
 import { ensureClientProfileKey } from './services/cryptoService';
 import { initClientStore } from './services/clientStore';
+import { initUserStore } from './services/userStore';
+
+// Initialize user store (creates admin from .env if needed)
+initUserStore();
 
 // Validate CLIENT_PROFILE_KEY at startup (fail-fast if missing/invalid)
 ensureClientProfileKey();

@@ -39,7 +39,10 @@ import {
 import {
   createSession,
   deleteSession,
+  getSessionUser,
 } from '../middleware/basicAuth';
+import { createUser, getAllUsers, updateUser, deleteUser, changePassword } from '../services/userStore';
+import { requirePermission } from '../middleware/permissions';
 import logger from '../utils/logger';
 
 const router = Router();
@@ -681,13 +684,10 @@ router.post('/auth/logout', (req: Request, res: Response) => {
 // Check auth status
 router.get('/auth/check', (req: Request, res: Response) => {
   const token = req.headers['x-session-token'] as string;
-
-  // This endpoint is used to verify if a session is still valid
-  // The basicAuth middleware will handle the validation
-  res.json({
-    success: true,
-    authenticated: true,
-  });
+  if (!token) return res.json({ success: true, data: { authenticated: false } });
+  const user = getSessionUser(token);
+  if (!user) return res.json({ success: true, data: { authenticated: false } });
+  res.json({ success: true, data: { authenticated: true, user } });
 });
 
 // =====================
@@ -812,6 +812,74 @@ router.get('/token/list', (req: Request, res: Response) => {
     count: tokens.length,
     tokens,
   });
+});
+
+
+
+// =====================
+// User Management (admin only)
+// =====================
+
+router.get('/admin/users', requirePermission('users:manage'), (req: Request, res: Response) => {
+  try {
+    const users = getAllUsers();
+    res.json({ success: true, data: users });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/admin/users', requirePermission('users:manage'), (req: Request, res: Response) => {
+  try {
+    const { username, password, name, role } = req.body;
+    if (!username || !password || !name || !role) {
+      return res.status(400).json({ success: false, error: 'username, password, name and role are required' });
+    }
+    const user = createUser(username, password, name, role);
+    const { passwordHash, ...safe } = user as any;
+    res.status(201).json({ success: true, data: safe });
+  } catch (error: any) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+router.patch('/admin/users/:id', requirePermission('users:manage'), (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, role, isActive, password } = req.body;
+
+    if (isActive === false && req.user?.id === id) {
+      return res.status(400).json({ success: false, error: 'Cannot deactivate yourself' });
+    }
+
+    const updates: any = {};
+    if (name !== undefined) updates.name = name;
+    if (role !== undefined) updates.role = role;
+    if (isActive !== undefined) updates.isActive = isActive;
+
+    const user = updateUser(id, updates);
+    if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+
+    if (password) changePassword(id, password);
+
+    const { passwordHash, ...safe } = user as any;
+    res.json({ success: true, data: safe });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.delete('/admin/users/:id', requirePermission('users:manage'), (req: Request, res: Response) => {
+  try {
+    if (req.user?.id === req.params.id) {
+      return res.status(400).json({ success: false, error: 'Cannot deactivate yourself' });
+    }
+    const deleted = deleteUser(req.params.id);
+    if (!deleted) return res.status(404).json({ success: false, error: 'User not found' });
+    res.json({ success: true, message: 'User deactivated' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 export default router;
