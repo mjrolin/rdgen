@@ -37,7 +37,6 @@ import {
   checkBuildRateLimit,
 } from '../middleware/apiKeyAuth';
 import {
-  validateCredentials,
   createSession,
   deleteSession,
 } from '../middleware/basicAuth';
@@ -645,7 +644,8 @@ router.post('/auth/login', (req: Request, res: Response) => {
     });
   }
 
-  if (!validateCredentials(username, password)) {
+  const session = createSession(username, password);
+  if (!session) {
     logger.warn(`Failed login attempt for user: ${username}`);
     return res.status(401).json({
       success: false,
@@ -653,14 +653,13 @@ router.post('/auth/login', (req: Request, res: Response) => {
     });
   }
 
-  const token = createSession(username);
   logger.info(`User logged in: ${username}`);
 
   res.json({
     success: true,
     data: {
-      token,
-      user: username,
+      token: session.token,
+      user: session.user,
     },
   });
 });
