@@ -74,7 +74,7 @@ export function LogoutButton() {
 
   return (
     <div className="flex items-center gap-4">
-      {user && <span className="text-gray-400 text-sm">Logged in as: {user}</span>}
+      {user && <span className="text-gray-400 text-sm">Logged in as: {user.name}</span>}
       <button
         onClick={handleLogout}
         className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"

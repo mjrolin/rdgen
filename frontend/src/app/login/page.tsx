@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { setAuth } from '@/lib/auth';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -27,9 +28,8 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (data.success) {
-        // Save token to localStorage
-        localStorage.setItem('rdgen_token', data.data.token);
-        localStorage.setItem('rdgen_user', data.data.user);
+        // Save token and full user object to localStorage
+        setAuth(data.data.token, data.data.user);
         // Redirect to home
         router.push('/');
       } else {
